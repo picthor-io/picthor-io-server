@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace='io.picthor.data.mapper.BatchJobMapper'>
+
+    <resultMap id="BatchJobResult" type="io.picthor.data.entity.BatchJob">
+        <id property="id" column="id"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <result property="state" column="state"/>
+        <result property="name" column="name"/>
+        <result property="type" column="type"/>
+        <result property="payload" column="payload" typeHandler="io.picthor.data.mapper.handler.JsonbStringTypeHandler"/>
+        <result property="processType" column="process_type"/>
+        <result property="processAt" column="process_at"/>
+        <result property="totalItems" column="total_items"/>
+        <association property="totalProcessed" column="id" javaType="Integer" select="countAllProcessedItems"/>
+    </resultMap>
+
+    <sql id="BatchJobFields">
+        ${alias}.id                             "${prefix}id",
+        ${alias}.created_at                     "${prefix}created_at",
+        ${alias}.updated_at                     "${prefix}updated_at",
+        ${alias}.state                          "${prefix}state",
+        ${alias}.type                           "${prefix}type",
+        ${alias}.name                           "${prefix}name",
+        ${alias}.payload                        "${prefix}payload",
+        ${alias}.total_items                    "${prefix}total_items",
+        ${alias}.process_type                   "${prefix}process_type",
+        ${alias}.process_at                     "${prefix}process_at"
+    </sql>
+
+    <sql id="BatchJobSelect">
+        SELECT
+        <include refid="BatchJobFields">
+            <property name="alias" value="batch_job"/>
+            <property name="prefix" value=""/>
+        </include>
+        FROM batch_job
+    </sql>
+
+    <select id="findByRooDirectoryId" resultMap="BatchJobResult">
+        <include refid="BatchJobSelect"/>
+        <where>
+            batch_job.payload -> 'rootDirectoryId' = '${rootDirectoryId}'
+        </where>
+        ORDER BY batch_job.id
+    </select>
+
+    <select id="findAll" resultMap="BatchJobResult">
+        <include refid="BatchJobSelect"/>
+    </select>
+
+    <select id="findAllFiltered" resultMap="BatchJobResult">
+        <bind name="offset" value="filter.limit.offset" />
+        <bind name="limit" value="filter.limit.limit" />
+        <include refid="BatchJobSelect"/>
+        <include refid="com.realcnbs.horizon.framework.data.mapper.Generic.FieldFilter">
+            <property name="prefix" value="batch_job."/>
+        </include>
+        <if test="filter == null or filter.fieldFilters.size == 0">
+            <where>batch_job.state != 'ARCHIVED'</where>
+        </if>
+        <if test="filter != null and filter.fieldFilters.size > 0">
+            AND batch_job.state != 'ARCHIVED'
+        </if>
+        <include refid="com.realcnbs.horizon.framework.data.mapper.Generic.Sort">
+            <property name="prefix" value="batch_job."/>
+        </include>
+        <include refid="com.realcnbs.horizon.framework.data.mapper.Generic.Limit">
+            <property name="prefix" value="batch_job."/>
+        </include>
+    </select>
+
+    <select id="findOneFiltered" resultMap="BatchJobResult">
+        <bind name="offset" value="0" />
+        <bind name="limit" value="1" />
+        <include refid="BatchJobSelect"/>
+        <include refid="com.realcnbs.horizon.framework.data.mapper.Generic.FieldFilter">
+            <property name="prefix" value="batch_job."/>
+        </include>
+        <include refid="com.realcnbs.horizon.framework.data.mapper.Generic.Limit">
+            <property name="prefix" value="batch_job."/>
+        </include>
+    </select>
+
+    <select id="countAllFiltered" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM batch_job
+        <include refid="com.realcnbs.horizon.framework.data.mapper.Generic.FieldFilter">
+            <property name="prefix" value="batch_job."/>
+        </include>
+        <where>batch_job.state != 'ARCHIVED'</where>
+    </select>
+
+    <select id="countAll" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM batch_job;
+        <where>batch_job.state != 'ARCHIVED'</where>
+    </select>
+
+    <select id="countAllProcessedItems" resultType="java.lang.Integer">
+        SELECT COUNT(batch_job_item.id)
+        FROM batch_job_item WHERE batch_job_item.state = 'PROCESSED' AND batch_job_id = #{id}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true"
+            keyProperty="id">
+        INSERT INTO batch_job (
+            created_at,
+            state,
+            name,
+            type,
+            total_items,
+            process_type,
+            process_at,
+            payload,
+            updated_at
+        )
+        VALUES (
+           #{createdAt},
+           #{state},
+           #{name},
+           #{type},
+           #{totalItems},
+           #{processType},
+           #{processAt},
+           #{payload, typeHandler=io.picthor.data.mapper.handler.JsonbStringTypeHandler},
+           #{updatedAt}
+       );
+    </insert>
+
+    <update id="update" >
+        UPDATE batch_job
+        SET
+        name = #{name},
+        type = #{type},
+        state = #{state},
+        total_items = #{totalItems},
+        updated_at = #{updatedAt},
+        payload = #{payload, typeHandler=io.picthor.data.mapper.handler.JsonbStringTypeHandler},
+        process_type = #{processType},
+        process_at = #{processAt}
+        <where>
+            id = #{id}
+        </where>
+    </update>
+
+    <delete id="delete">
+        DELETE FROM batch_job
+        WHERE id = #{id}
+    </delete>
+
+
+</mapper>

@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace='io.picthor.data.mapper.FileDataMapper'>
+
+    <resultMap id="FileDataResult" type="io.picthor.data.entity.FileData">
+        <id property="id" column="id"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <result property="takenAt" column="taken_at"/>
+        <result property="fullPath" column="full_path"/>
+        <result property="dirPath" column="dir_path"/>
+        <result property="hash" column="hash"/>
+        <result property="fileName" column="file_name"/>
+        <result property="baseName" column="base_name"/>
+        <result property="type" column="type"/>
+        <result property="indexNanos" column="index_nanos"/>
+        <result property="syncState" column="sync_state"/>
+        <result property="extension" column="extension"/>
+        <result property="sizeBytes" column="size_bytes"/>
+        <result property="meta" column="meta" typeHandler="io.picthor.data.mapper.handler.JsonbStringTypeHandler"/>
+        <result property="rootDirectoryId" column="root_directory_id"/>
+    </resultMap>
+
+    <sql id="FileDataFields">
+        ${alias}.id                       ${prefix}id,
+        ${alias}.created_at               ${prefix}created_at,
+        ${alias}.updated_at               ${prefix}updated_at,
+        ${alias}.taken_at                 ${prefix}taken_at,
+        ${alias}.file_name                ${prefix}file_name,
+        ${alias}.full_path                ${prefix}full_path,
+        ${alias}.dir_path                 ${prefix}dir_path,
+        ${alias}.hash                     ${prefix}hash,
+        ${alias}.base_name                ${prefix}base_name,
+        ${alias}.type                     "${prefix}type",
+        ${alias}.index_nanos              ${prefix}index_nanos,
+        ${alias}.sync_state               ${prefix}sync_state,
+        ${alias}.extension                "${prefix}extension",
+        ${alias}.size_bytes               ${prefix}size_bytes,
+        ${alias}.meta                     ${prefix}meta,
+        ${alias}.error                    ${prefix}error,
+        ${alias}.directory_id             ${prefix}directory_id,
+        ${alias}.root_directory_id        ${prefix}root_directory_id
+    </sql>
+
+    <sql id="FileDataSelect">
+        SELECT
+        <include refid="io.picthor.data.mapper.FileDataMapper.FileDataFields">
+            <property name="alias" value="file_data"/>
+            <property name="prefix" value=""/>
+        </include>
+        FROM file_data
+    </sql>
+
+    <select id="findIdsByRootDirectoryId" resultType="Long">
+        SELECT file_data.id FROM file_data WHERE file_data.root_directory_id = #{id}
+    </select>
+
+    <select id="findByFileName" resultMap="FileDataResult">
+        <include refid="FileDataSelect"/>
+        <where>
+            file_data.file_name = #{fileName}
+        </where>
+    </select>
+
+    <select id="findByBaseName" resultMap="FileDataResult">
+        <include refid="FileDataSelect"/>
+        <where>
+            file_data.base_name = #{baseName}
+        </where>
+    </select>
+
+    <select id="findAll" resultMap="FileDataResult">
+        <include refid="FileDataSelect"/>
+    </select>
+
+    <select id="findAllFiltered" resultMap="FileDataResult">
+        <bind name="offset" value="filter.limit.offset" />
+        <bind name="limit" value="filter.limit.limit" />
+        <include refid="FileDataSelect"/>
+        <include refid="com.realcnbs.horizon.framework.data.mapper.Generic.FieldFilter">
+            <property name="prefix" value="file_data."/>
+        </include>
+        <include refid="com.realcnbs.horizon.framework.data.mapper.Generic.Sort">
+            <property name="prefix" value="file_data."/>
+        </include>
+        <include refid="com.realcnbs.horizon.framework.data.mapper.Generic.Limit">
+            <property name="prefix" value="file_data."/>
+        </include>
+    </select>
+
+    <select id="findOneFiltered" resultMap="FileDataResult">
+        <bind name="offset" value="0" />
+        <bind name="limit" value="1" />
+        <include refid="FileDataSelect"/>
+        <include refid="com.realcnbs.horizon.framework.data.mapper.Generic.FieldFilter">
+            <property name="prefix" value="file_data."/>
+        </include>
+        <include refid="com.realcnbs.horizon.framework.data.mapper.Generic.Limit">
+            <property name="prefix" value="file_data."/>
+        </include>
+    </select>
+
+    <select id="countAllFiltered" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM file_data
+        <include refid="com.realcnbs.horizon.framework.data.mapper.Generic.FieldFilter">
+            <property name="prefix" value="file_data."/>
+        </include>
+    </select>
+
+    <select id="countAll" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM file_data;
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO file_data (
+            created_at,
+            updated_at,
+            taken_at,
+            full_path,
+            dir_path,
+            hash,
+            file_name,
+            base_name,
+            type,
+            sync_state,
+            index_nanos,
+            extension,
+            size_bytes,
+            meta,
+            error,
+            root_directory_id,
+            directory_id
+        )
+        VALUES (
+                #{createdAt},
+                #{updatedAt},
+                #{takenAt},
+                #{fullPath},
+                #{dirPath},
+                #{hash},
+                #{fileName},
+                #{baseName},
+                #{type},
+                #{syncState},
+                #{indexNanos},
+                #{extension},
+                #{sizeBytes},
+                #{meta, typeHandler=io.picthor.data.mapper.handler.JsonbStringTypeHandler},
+                #{error},
+                #{rootDirectoryId},
+                #{directoryId}
+        );
+    </insert>
+
+    <insert id="update">
+        UPDATE file_data
+        SET
+        updated_at = #{updatedAt},
+        taken_at = #{takenAt},
+        full_path = #{fullPath},
+        dir_path = #{dirPath},
+        hash = #{hash},
+        file_name = #{fileName},
+        base_name = #{baseName},
+        type = #{type},
+        sync_state = #{syncState},
+        index_nanos = #{indexNanos},
+        extension = #{extension},
+        size_bytes = #{sizeBytes},
+        meta  = #{meta, typeHandler=io.picthor.data.mapper.handler.JsonbStringTypeHandler},
+        root_directory_id  = #{rootDirectoryId},
+        error  = #{error},
+        directory_id  = #{directoryId}
+        <where>
+            id = #{id}
+        </where>
+    </insert>
+
+    <delete id="delete">
+        DELETE FROM file_data
+        WHERE id = #{id}
+    </delete>
+
+
+</mapper>

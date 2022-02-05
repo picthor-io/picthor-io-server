@@ -1,0 +1,19 @@
+${AnsiColor.YELLOW}
+${AnsiColor.YELLOW}                           _      __  __               _
+${AnsiColor.YELLOW}                    ____  (_)____/ /_/ /_  ____  _____(_)___
+${AnsiColor.YELLOW}                   / __ \/ / ___/ __/ __ \/ __ \/ ___/ / __ \
+${AnsiColor.YELLOW}                  / /_/ / / /__/ /_/ / / / /_/ / /  / / /_/ /
+${AnsiColor.YELLOW}                 / .___/_/\___/\__/_/ /_/\____/_(_)/_/\____/
+${AnsiColor.YELLOW}                /_/
+
+
+
+${AnsiColor.GREEN}VERSION:                                  ${PICTHOR_IO_APP_VERSION:UNKNOWN}
+${AnsiColor.GREEN}PICTHOR_UI_STATIC_FILES_DIR:              ${PICTHOR_UI_STATIC_FILES_DIR}
+${AnsiColor.GREEN}PICTHOR_CACHE_DIR:                        ${PICTHOR_CACHE_DIR}
+${AnsiColor.GREEN}PICTHOR_POSTGRES_JDBC_URL:                ${PICTHOR_POSTGRES_JDBC_URL:NOT SET IN ENV - USING DEFAULT}
+${AnsiColor.GREEN}PICTHOR_HIKARI_POOL_SIZE:                 ${PICTHOR_HIKARI_POOL_SIZE:NOT SET IN ENV - USING DEFAULT}
+${AnsiColor.GREEN}PICTHOR_THREADS_NUM:                      ${PICTHOR_THREADS_NUM:NOT SET IN ENV - USING DEFAULT}
+${AnsiColor.GREEN}PICTHOR_CORS_ORIGINS:                     ${PICTHOR_CORS_ORIGINS:NOT SET IN ENV - USING DEFAULT}
+
+${AnsiColor.YELLOW}***********************************************************************************************************************}

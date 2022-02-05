@@ -1,0 +1,44 @@
+server:
+  port: ${PICTHOR_SERVER_PORT:5000}
+  shutdown: graceful
+
+spring:
+  web:
+    locale: en_US
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 20MB
+  datasource:
+    url: ${PICTHOR_POSTGRES_JDBC_URL:jdbc:postgresql://localhost:5432/picthor}
+    username: ${PICTHOR_POSTGRES_USERNAME:picthor}
+    password: ${PICTHOR_POSTGRES_PASSWORD:password}
+    hikari:
+      maximum-pool-size: ${PICTHOR_HIKARI_POOL_SIZE:20}
+  quartz:
+    auto-startup: true
+    job-store-type: memory
+    wait-for-jobs-to-complete-on-shutdown: false
+
+logging:
+  level:
+    io.picthor: ${PICTHOR_LOG_LEVEL:DEBUG}
+    io.picthor.data.mapper: INFO
+#    io.picthor.data.mapper.FileDataMapper: INFO
+#    io.picthor.data.mapper.DirectoryMapper: INFO
+#    io.picthor.data.mapper.BatchJobItemMapper: INFO
+#    io.picthor.config: INFO
+
+mybatis:
+  configuration:
+    map-underscore-to-camel-case: true
+    auto-mapping-unknown-column-behavior: failing
+    return-instance-for-empty-row: off
+    call-setters-on-nulls: true
+
+config:
+  allowed-cors-origins: ${PICTHOR_CORS_ORIGINS:chrome-extension://aejoelaoggembcahagimdiliamlcdmfm,http://localhost:4200}
+  cache-dir: ${PICTHOR_CACHE_DIR}
+  threads-num: ${PICTHOR_THREADS_NUM:4}

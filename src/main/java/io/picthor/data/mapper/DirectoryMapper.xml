@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace='io.picthor.data.mapper.DirectoryMapper'>
+
+    <resultMap id="DirectoryResult" type="io.picthor.data.entity.Directory">
+        <id property="id" column="id"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <result property="state" column="state"/>
+        <result property="type" column="type"/>
+        <result property="name" column="name"/>
+        <result property="fullPath" column="full_path"/>
+        <result property="description" column="description"/>
+        <result property="excludes" column="excludes"/>
+        <result property="parentId" column="parent_id"/>
+        <result property="rootDirectoryId" column="root_directory_id"/>
+        <result property="stats" column="stats" typeHandler="io.picthor.data.mapper.handler.JsonbDirectoryStatsTypeHandler"/>
+    </resultMap>
+
+    <select id="fetchChildren" resultMap="DirectoryResult">
+        SELECT
+        <include refid="io.picthor.data.mapper.DirectoryMapper.DirectoryFields">
+            <property name="alias" value="directory"/>
+            <property name="prefix" value=""/>
+        </include>
+        FROM directory
+        WHERE parent_id = #{id}
+    </select>
+
+    <select id="countTotalSizeBytes" resultType="java.lang.Long">
+        SELECT CASE
+                   WHEN type = 'ROOT' THEN (SELECT SUM(file_data.size_bytes) FROM file_data WHERE root_directory_id = #{id})
+                   WHEN type != 'ROOT' THEN (SELECT SUM(file_data.size_bytes) FROM file_data WHERE directory_id = #{id})
+               END
+        FROM directory WHERE id = #{id}
+    </select>
+
+    <select id="countTotalFiles" resultType="java.lang.Integer">
+        SELECT CASE
+                   WHEN type = 'ROOT' THEN (SELECT COUNT(*) FROM file_data WHERE root_directory_id = #{id})
+                   WHEN type != 'ROOT' THEN (SELECT COUNT(*) FROM file_data WHERE directory_id = #{id})
+               END
+        FROM directory WHERE id = #{id}
+    </select>
+
+    <select id="fetchFlatTree" resultMap="DirectoryResult">
+        <include refid="DirectoryTreeSelect"/>
+    </select>
+
+    <select id="updateFileNumStats">
+        UPDATE directory
+        SET stats = stats || JSONB_BUILD_OBJECT('files_num', stats_agg.files_num, 'size_bytes', stats_agg.size_bytes)
+        FROM (SELECT file_data.directory_id, COUNT(*) AS files_num, SUM(size_bytes) AS size_bytes
+              FROM file_data
+              GROUP BY file_data.directory_id) stats_agg
+        WHERE directory.id = stats_agg.directory_id;
+    </select>
+
+    <select id="updateDirNumStats">
+        UPDATE directory
+        SET stats = stats || JSONB_BUILD_OBJECT('dirs_num', stats_agg.dirs_num)
+        FROM (SELECT directory.parent_id, COUNT(*) AS dirs_num
+              FROM directory
+              GROUP BY directory.parent_id) stats_agg
+        WHERE directory.id = stats_agg.parent_id;
+    </select>
+
+    <update id="persistStatsMaps">
+        UPDATE directory SET
+            stats = d.stats
+        FROM (VALUES
+            <foreach item="item" index="index" collection="statsMap" separator=",">
+                (#{index}, #{item, typeHandler=io.picthor.data.mapper.handler.JsonbDirectoryStatsTypeHandler})
+            </foreach>
+            ) AS d(directory_id, stats)
+        WHERE directory.id = d.directory_id;
+    </update>
+
+    <sql id="DirectoryTreeSelect">
+        WITH RECURSIVE dir_tree AS (
+            SELECT *, 1 AS level
+            FROM directory
+            WHERE id = #{rootId}
+            UNION ALL
+            SELECT d2.*, dir_tree.level + 1 AS level
+            FROM directory d2
+            JOIN dir_tree ON d2.parent_id = dir_tree.id)
+        SELECT
+        <include refid="io.picthor.data.mapper.DirectoryMapper.DirectoryFields">
+            <property name="alias" value="dir_tree"/>
+            <property name="prefix" value=""/>
+        </include>
+        FROM dir_tree;
+    </sql>
+
+    <sql id="DirectoryFields">
+        ${alias}.id                             "${prefix}id",
+        ${alias}.created_at                     "${prefix}created_at",
+        ${alias}.updated_at                     "${prefix}updated_at",
+        ${alias}.last_sync_at                   "${prefix}last_sync_at",
+        ${alias}.state                          "${prefix}state",
+        ${alias}.type                           "${prefix}type",
+        ${alias}.name                           "${prefix}name",
+        ${alias}.full_path                      "${prefix}full_path",
+        ${alias}.description                    "${prefix}description",
+        ${alias}.excludes                       "${prefix}excludes",
+        ${alias}.parent_id                      "${prefix}parent_id",
+        ${alias}.root_directory_id              "${prefix}root_directory_id",
+        ${alias}.stats                          "${prefix}stats"
+    </sql>
+
+    <sql id="DirectorySelect">
+        SELECT
+        <include refid="io.picthor.data.mapper.DirectoryMapper.DirectoryFields">
+            <property name="alias" value="directory"/>
+            <property name="prefix" value=""/>
+        </include>
+        FROM directory
+    </sql>
+
+    <select id="findByFileName" resultMap="DirectoryResult">
+        <include refid="DirectorySelect"/>
+        <where>
+            directory.file_name = #{fileName}
+        </where>
+    </select>
+
+    <select id="findAll" resultMap="DirectoryResult">
+        <include refid="DirectorySelect"/>
+    </select>
+
+    <select id="findAllFiltered" resultMap="DirectoryResult">
+        <bind name="offset" value="filter.limit.offset" />
+        <bind name="limit" value="filter.limit.limit" />
+        <include refid="DirectorySelect"/>
+        <include refid="com.realcnbs.horizon.framework.data.mapper.Generic.FieldFilter">
+            <property name="prefix" value="directory."/>
+        </include>
+        <include refid="com.realcnbs.horizon.framework.data.mapper.Generic.Sort">
+            <property name="prefix" value="directory."/>
+        </include>
+        <include refid="com.realcnbs.horizon.framework.data.mapper.Generic.Limit">
+            <property name="prefix" value="directory."/>
+        </include>
+    </select>
+
+    <select id="findOneFiltered" resultMap="DirectoryResult">
+        <bind name="offset" value="0" />
+        <bind name="limit" value="1" />
+        <include refid="DirectorySelect"/>
+        <include refid="com.realcnbs.horizon.framework.data.mapper.Generic.FieldFilter">
+            <property name="prefix" value="directory."/>
+        </include>
+        <include refid="com.realcnbs.horizon.framework.data.mapper.Generic.Limit">
+            <property name="prefix" value="directory."/>
+        </include>
+    </select>
+
+    <select id="countAllFiltered" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM directory
+        <include refid="com.realcnbs.horizon.framework.data.mapper.Generic.FieldFilter">
+            <property name="prefix" value="directory."/>
+        </include>
+    </select>
+
+    <select id="countAll" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM directory;
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true"
+            keyProperty="id">
+        INSERT INTO directory (
+            created_at,
+            updated_at,
+            last_sync_at,
+            state,
+            type,
+            name,
+            full_path,
+            description,
+            excludes,
+            parent_id,
+            root_directory_id
+        )
+        VALUES (
+           #{createdAt},
+           #{updatedAt},
+           #{lastSyncAt},
+           #{state},
+           #{type},
+           #{name},
+           #{fullPath},
+           #{description},
+           #{excludes},
+           #{parentId},
+           #{rootDirectoryId}
+       );
+    </insert>
+
+    <update id="update">
+        UPDATE directory
+        SET
+        name = #{name},
+        state = #{state},
+        type = #{type},
+        updated_at = #{updatedAt},
+        last_sync_at = #{lastSyncAt},
+        full_path = #{fullPath},
+        description = #{description},
+        excludes = #{excludes},
+        parent_id = #{parentId},
+        root_directory_id = #{rootDirectoryId}
+        <where>
+            id = #{id}
+        </where>
+    </update>
+
+    <delete id="delete">
+        DELETE FROM directory
+        WHERE id = #{id}
+    </delete>
+
+
+</mapper>

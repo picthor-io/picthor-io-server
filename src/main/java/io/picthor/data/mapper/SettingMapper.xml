@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace='io.picthor.data.mapper.SettingMapper'>
+
+    <resultMap id="SettingResult" type="io.picthor.data.entity.Setting">
+        <id property="id" column="id"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <result property="name" column="name"/>
+        <result property="value" column="value"/>
+        <result property="type" column="type"/>
+    </resultMap>
+
+    <sql id="SettingFields">
+        ${alias}.id                       ${prefix}id,
+        ${alias}.created_at               ${prefix}created_at,
+        ${alias}.updated_at               ${prefix}updated_at,
+        ${alias}.name                     ${prefix}name,
+        ${alias}.value                    ${prefix}value,
+        ${alias}.type                     ${prefix}type
+    </sql>
+
+    <sql id="SettingSelect">
+        SELECT
+        <include refid="io.picthor.data.mapper.SettingMapper.SettingFields">
+            <property name="alias" value="setting"/>
+            <property name="prefix" value=""/>
+        </include>
+        FROM setting
+    </sql>
+
+    <select id="findAll" resultMap="SettingResult">
+        <include refid="SettingSelect"/>
+    </select>
+
+    <select id="findAllFiltered" resultMap="SettingResult">
+        <bind name="offset" value="filter.limit.offset" />
+        <bind name="limit" value="filter.limit.limit" />
+        <include refid="SettingSelect"/>
+        <include refid="com.realcnbs.horizon.framework.data.mapper.Generic.FieldFilter">
+            <property name="prefix" value="setting."/>
+        </include>
+        <include refid="com.realcnbs.horizon.framework.data.mapper.Generic.Sort">
+            <property name="prefix" value="setting."/>
+        </include>
+        <include refid="com.realcnbs.horizon.framework.data.mapper.Generic.Limit">
+            <property name="prefix" value="setting."/>
+        </include>
+    </select>
+
+    <select id="findOneFiltered" resultMap="SettingResult">
+        <bind name="offset" value="0" />
+        <bind name="limit" value="1" />
+        <include refid="SettingSelect"/>
+        <include refid="com.realcnbs.horizon.framework.data.mapper.Generic.FieldFilter">
+            <property name="prefix" value="setting."/>
+        </include>
+        <include refid="com.realcnbs.horizon.framework.data.mapper.Generic.Limit">
+            <property name="prefix" value="setting."/>
+        </include>
+    </select>
+
+    <select id="countAllFiltered" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM setting
+        <include refid="com.realcnbs.horizon.framework.data.mapper.Generic.FieldFilter">
+            <property name="prefix" value="setting."/>
+        </include>
+    </select>
+
+    <select id="countAll" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM setting;
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO setting (
+            created_at,
+            updated_at,
+            name,
+            value,
+            type
+        )
+        VALUES (
+            #{createdAt},
+            #{updatedAt},
+            #{name},
+            #{value},
+            #{type}
+        );
+    </insert>
+
+    <insert id="update">
+        UPDATE setting
+        SET
+        updated_at = #{updatedAt},
+        name = #{name},
+        value = #{value},
+        value = #{type}
+        <where>
+            id = #{id}
+        </where>
+    </insert>
+
+    <delete id="delete">
+        DELETE FROM setting
+        WHERE id = #{id}
+    </delete>
+
+
+</mapper>
