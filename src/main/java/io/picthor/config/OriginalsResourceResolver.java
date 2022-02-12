@@ -3,7 +3,6 @@ package io.picthor.config;
 import io.picthor.data.dao.FileDataDao;
 import io.picthor.data.entity.FileData;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.BeanFactory;
 import org.springframework.core.io.FileUrlResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
@@ -15,20 +14,20 @@ import java.util.List;
 
 @Service
 @Slf4j
-public class FullSizeResourceResolver extends PathResourceResolver {
+public class OriginalsResourceResolver extends PathResourceResolver {
 
     private final FileDataDao fileDataDao;
 
-    public FullSizeResourceResolver(FileDataDao fileDataDao) {
+    public OriginalsResourceResolver(FileDataDao fileDataDao) {
         this.fileDataDao = fileDataDao;
     }
 
     @Override
     protected Resource resolveResourceInternal(HttpServletRequest request, String requestPath, List<? extends Resource> locations,
                                                ResourceResolverChain chain) {
-//        initBeans();
+        System.out.println(requestPath);
         if (!requestPath.isEmpty()) {
-            log.debug("Resolving full size resource for: {}", requestPath);
+            log.debug("Resolving originals resource for: {}", requestPath);
             try {
                 String[] parts = requestPath.split("/");
                 Long id = Long.valueOf(parts[0]);
