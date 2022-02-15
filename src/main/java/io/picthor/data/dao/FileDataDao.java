@@ -38,6 +38,8 @@ public class FileDataDao extends AbstractEntityDao<FileData> {
     public List<SortDefinition> getAllowedSorts() {
         List<SortDefinition> sorts = super.getAllowedSorts();
         sorts.add(new SortDefinition("created_at"));
+        sorts.add(new SortDefinition("size_bytes"));
+        sorts.add(new SortDefinition("extension"));
         return sorts;
     }
 
@@ -71,4 +73,5 @@ public class FileDataDao extends AbstractEntityDao<FileData> {
         filters.add(new FilterDefinition("type", FieldFilter.CheckType.EQUALS, FilterDefinition.DataType.STRING));
         return filters;
     }
+
 }

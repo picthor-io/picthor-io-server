@@ -25,7 +25,6 @@ public class OriginalsResourceResolver extends PathResourceResolver {
     @Override
     protected Resource resolveResourceInternal(HttpServletRequest request, String requestPath, List<? extends Resource> locations,
                                                ResourceResolverChain chain) {
-        System.out.println(requestPath);
         if (!requestPath.isEmpty()) {
             log.debug("Resolving originals resource for: {}", requestPath);
             try {

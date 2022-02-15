@@ -14,12 +14,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -29,7 +26,7 @@ public class FilesIndexer {
 
     private final DirectoryDao directoryDao;
 
-    private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssZZZZZ");
+    private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final Map<String, Long> directoryIdsMap = new HashMap<>();
 
@@ -74,50 +71,23 @@ public class FilesIndexer {
     }
 
     public void readFileMeta(FileData fileData) {
-        String output = null;
+        String json = null;
 
-        // video meta is not supported yet
-        if (FileData.VIDEO_EXTENSIONS.contains(fileData.getExtension().toUpperCase())) {
-            try {
-                fileData.setTakenAt(Files.getLastModifiedTime(Path.of(fileData.getFullPath())).toInstant()
-                        .atZone(ZoneId.systemDefault())
-                        .toLocalDateTime());
-            } catch (IOException e) {
-                log.error("Failed to read video modified time: {}", fileData.getFullPath(), e);
-            }
-            return;
-        }
-
-        // Some extensions might represent different formats - TIF and TIFF might be both raw and libtiff
-        // For such cases try raw: delegate first and the automatic delegate if raw: fails
         try {
-            if (FileData.RAW_EXTENSIONS.contains(fileData.getExtension().toUpperCase())) {
-                try {
-                    // try raw: delegate
-                    output = processRunner.execute("sh", "-c", "magick identify -format '%[DNG:*]' 'raw:" + fileData.getFullPath() + "[1x1+0+0]' ");
-                } catch (Exception e) {
-                    // try automatic: delegate
-                    output = processRunner.execute("sh", "-c", "magick identify -format '%[EXIF:*]' '" + fileData.getFullPath() + "[1x1+0+0]' ");
-                }
-            } else {
-                output = processRunner.execute("sh", "-c", "magick identify -format '%[EXIF:*]' '" + fileData.getFullPath() + "[1x1+0+0]' ");
-            }
+            json = processRunner.execute("sh", "-c", "exiftool -Software -GPSAltitude -GPSLongitude -GPSLatitude -LensID -ImageWidth -ImageHeight" +
+                    " -FocalLength -FocalLengthIn35mmFormat -ISO -Aperture -Model -Make -ShutterSpeed" +
+                    " -CreateDate -DateTimeOriginal -json '" + fileData.getFullPath() + "'");
         } catch (Exception e) {
             log.error("Failed to read file meta: {}", fileData.getFullPath(), e);
         }
-        if (output != null) {
-            String json = Arrays.stream(output.replace("\"", "\\\"")
-                            .split("\n"))
-                    .map(s -> s.split("="))
-                    .filter(s -> s.length > 1)
-                    .peek(s -> s[0] = s[0].replace(":", "_"))
-                    .map(s -> "\"" + s[0] + "\":\"" + s[1] + "\"")
-                    .collect(Collectors.joining(",", "{", "}"));
-
+        if (json != null) {
+            if (json.startsWith("[")) {
+                json = json.substring(1).substring(0, json.length() - 2);
+            }
             fileData.setMeta(json);
-            if (output.contains("date:modify".toLowerCase())) {
-                ReadContext ctx = JsonPath.parse(output);
-                fileData.setTakenAt(LocalDateTime.parse(ctx.read("$[0].exif_date_modify"), formatter));
+            if (json.contains("CreateDate".toLowerCase())) {
+                ReadContext ctx = JsonPath.parse(json);
+                fileData.setTakenAt(LocalDateTime.parse(ctx.read("$[0].CreateDate"), formatter));
             }
         }
     }
