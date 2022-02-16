@@ -36,15 +36,15 @@ public class MvcConfig implements WebMvcConfigurer {
 
     private final ThumbsResourceResolver thumbsResourceResolver;
 
-    private final FullSizeResourceResolver fullSizeResourceResolver;
+    private final OriginalsResourceResolver originalsResourceResolver;
 
     @Value("${PICTHOR_UI_STATIC_FILES_DIR}")
     private String staticFileDir;
 
-    public MvcConfig(AppProperties properties, ThumbsResourceResolver thumbsResourceResolver, FullSizeResourceResolver fullSizeResourceResolver) {
+    public MvcConfig(AppProperties properties, ThumbsResourceResolver thumbsResourceResolver, OriginalsResourceResolver originalsResourceResolver) {
         this.properties = properties;
         this.thumbsResourceResolver = thumbsResourceResolver;
-        this.fullSizeResourceResolver = fullSizeResourceResolver;
+        this.originalsResourceResolver = originalsResourceResolver;
     }
 
     @Override
@@ -57,10 +57,10 @@ public class MvcConfig implements WebMvcConfigurer {
                 .addResolver(thumbsResourceResolver)
         ;
         registry
-                .addResourceHandler("/fulls/by-id/**")
+                .addResourceHandler("/originals/by-id/**")
                 .setCachePeriod(0)
                 .resourceChain(false)
-                .addResolver(fullSizeResourceResolver)
+                .addResolver(originalsResourceResolver)
         ;
         registry
                 .addResourceHandler("/**")
@@ -124,7 +124,7 @@ public class MvcConfig implements WebMvcConfigurer {
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
                 .allowedOrigins(properties.getAllowedCorsOrigins().toArray(String[]::new))
-                .allowedMethods("POST", "PUT", "GET", "DELETE")
+                .allowedMethods("POST", "PUT", "GET", "DELETE", "HEAD")
         ;
         log.info("Allowed CORS origins: {}", properties.getAllowedCorsOrigins());
     }

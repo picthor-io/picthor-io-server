@@ -14,7 +14,10 @@ import io.picthor.data.entity.BatchJob;
 import io.picthor.data.entity.BatchJobItem;
 import io.picthor.data.entity.Directory;
 import io.picthor.data.entity.FileData;
-import io.picthor.services.*;
+import io.picthor.services.DirectoryStatsService;
+import io.picthor.services.FilesIndexer;
+import io.picthor.services.JobCounterService;
+import io.picthor.services.NotificationsService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.time.DurationFormatUtils;
@@ -108,6 +111,7 @@ public class NewFilesScannerProcessor extends AbstractBatchJobProcessor {
                         item.setInternalProcessed(item.getInternalProcessed() + 1);
                         jobCounterService.incr(item.getBatchJobId());
                         batchJobItemDao.persist(item);
+                        log.info("JOB: {} ITEM: {} No new files found in directory: {}", item.getBatchJobId(), item.getId(), directory.getFullPath());
                         continue;
                     }
                     sw.start();
@@ -188,6 +192,8 @@ public class NewFilesScannerProcessor extends AbstractBatchJobProcessor {
 
         try {
             List<Directory> directories = listAllDirectories(rootDir);
+            // add root as scanned dir too
+            directories.add(rootDir);
 
             int subSetSize = (int) (Math.ceil((directories.size() / appProperties.getThreadsNum()) / 10.0) * 10);
             List<List<Directory>> subSets = ListUtils.partition(directories, subSetSize);
@@ -221,7 +227,7 @@ public class NewFilesScannerProcessor extends AbstractBatchJobProcessor {
                 item.setInternalProcessed(0);
                 batchJobItemDao.persist(item);
                 job.getItems().add(item);
-                log.info("JOB: {} Created job item for: {} direcotries", job.getId(), subSet.size());
+                log.info("JOB: {} Created job item for: {} directories", job.getId(), subSet.size());
             }
         } catch (Exception e) {
             throw new BatchProcessingException("JOB: " + job.getId() + " Failed to scan for directories", e);
