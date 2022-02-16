@@ -1,4 +1,4 @@
-![Picthor.io](https://raw.githubusercontent.com/picthor-io/picthor-io-ui/512071aae6d06c4d43b916bba8ed7e7ce4f496fd/src/assets/picthor-logo-color.png)
+![Picthor.io](https://raw.githubusercontent.com/picthor-io/picthor-io-ui/main/src/assets/picthor-logo-color-big.png)
 
 ## Self hosted image library browser
 
