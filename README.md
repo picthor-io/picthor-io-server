@@ -1,8 +1,9 @@
-# Picthor.io
-## The self hosted image library browser
+![Picthor.io](https://raw.githubusercontent.com/picthor-io/picthor-io-ui/512071aae6d06c4d43b916bba8ed7e7ce4f496fd/src/assets/picthor-logo-color.png)
 
-This project is for the ones that want to be able to browse through their personal images (videos?) library regardless of its size.
-The project is built for personal use by the author/s and serves author needs.
+## Self hosted image library browser
+
+This project is for the ones that want to be able to quickly browse through their personal images and videos library regardless of its size.
+
 
 ##### Technology stack
 - Java + Spring Boot
@@ -11,7 +12,6 @@ The project is built for personal use by the author/s and serves author needs.
 - MyBatis 
 - ImageMagick
 - ffmpeg
+- exiftool
 - linux
 - docker
-
-###### docs to come...
