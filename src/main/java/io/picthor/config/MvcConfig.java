@@ -52,14 +52,14 @@ public class MvcConfig implements WebMvcConfigurer {
         registry
                 .addResourceHandler("/thumbs/by-id/**")
                 .addResourceLocations("file:" + properties.getCacheDir() + "/thumbs", "classpath:/public/")
-                .setCachePeriod(0)
-                .resourceChain(false)
+                .setCachePeriod(360)
+                .resourceChain(true)
                 .addResolver(thumbsResourceResolver)
         ;
         registry
                 .addResourceHandler("/originals/by-id/**")
-                .setCachePeriod(0)
-                .resourceChain(false)
+                .setCachePeriod(360)
+                .resourceChain(true)
                 .addResolver(originalsResourceResolver)
         ;
         registry

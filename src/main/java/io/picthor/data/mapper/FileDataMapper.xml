@@ -56,6 +56,12 @@
         SELECT file_data.id FROM file_data WHERE file_data.root_directory_id = #{id}
     </select>
 
+    <select id="getAllExtensions" resultType="String">
+        SELECT LOWER(extension) AS extension
+        FROM file_data
+        GROUP BY LOWER(extension)
+    </select>
+
     <select id="findByFileName" resultMap="FileDataResult">
         <include refid="FileDataSelect"/>
         <where>

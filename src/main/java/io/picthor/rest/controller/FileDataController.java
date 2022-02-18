@@ -7,8 +7,8 @@ import com.realcnbs.horizon.framework.rest.form.processor.FormProcessor;
 import com.realcnbs.horizon.framework.rest.repr.PagedEntityRepr;
 import io.picthor.data.dao.FileDataDao;
 import io.picthor.data.entity.FileData;
-import io.picthor.services.FilesIndexer;
 import io.picthor.rest.repr.FileDataRepr;
+import io.picthor.services.FilesIndexer;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.javassist.NotFoundException;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 @RequestMapping("/api/file-data")
 @RestController
@@ -36,6 +37,11 @@ public class FileDataController extends AbstractEntityController<FileData> {
     @RequestMapping(value = "/{id}", method = RequestMethod.GET)
     public FileDataRepr getById(@PathVariable("id") Long id) throws Exception {
         return (FileDataRepr) super.getEntityReprById(id);
+    }
+
+    @RequestMapping(value = "/extensions", method = RequestMethod.GET)
+    public List<String> getAllExtensions() {
+        return fileDataDao.getAllExtensions();
     }
 
     @RequestMapping(value = "/{id}/meta", method = RequestMethod.GET)

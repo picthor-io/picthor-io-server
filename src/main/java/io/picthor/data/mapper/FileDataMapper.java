@@ -11,4 +11,6 @@ public interface FileDataMapper extends EntityMapper<FileData> {
 
     List<Long> findIdsByRootDirectoryId(@Param("id") Long id);
 
+    List<String> getAllExtensions();
+
 }
