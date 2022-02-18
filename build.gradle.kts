@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "io.picthor"
-version = "1.0.0-BETA"
+version = "v1.0.0-beta-3"
 
 java {
     sourceCompatibility = JavaVersion.VERSION_17
