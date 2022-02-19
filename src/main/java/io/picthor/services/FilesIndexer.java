@@ -3,6 +3,7 @@ package io.picthor.services;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.ReadContext;
 import io.picthor.ProcessRunner;
+import io.picthor.config.AppProperties;
 import io.picthor.data.dao.DirectoryDao;
 import io.picthor.data.entity.Directory;
 import io.picthor.data.entity.FileData;
@@ -26,13 +27,16 @@ public class FilesIndexer {
 
     private final DirectoryDao directoryDao;
 
+    private final AppProperties appProperties;
+
     private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final Map<String, Long> directoryIdsMap = new HashMap<>();
 
-    public FilesIndexer(ProcessRunner processRunner, DirectoryDao directoryDao) {
+    public FilesIndexer(ProcessRunner processRunner, DirectoryDao directoryDao, AppProperties appProperties) {
         this.processRunner = processRunner;
         this.directoryDao = directoryDao;
+        this.appProperties = appProperties;
     }
 
     public FileData index(Path path) throws IOException {
@@ -63,7 +67,7 @@ public class FilesIndexer {
 
     public String getFileHash(Path path) {
         try {
-            return processRunner.execute("sh", "-c", " xxhsum '" + path.toString() + "' | awk '{print $1}'");
+            return processRunner.execute("sh", "-c", appProperties.getXxhsumBinPath() + " " + path.toString() + "' | awk '{print $1}'");
         } catch (Exception e) {
             log.error("Failed to get file hash: {}", path.toString(), e);
         }
@@ -74,7 +78,8 @@ public class FilesIndexer {
         String json = null;
 
         try {
-            json = processRunner.execute("sh", "-c", "exiftool -Software -GPSAltitude -GPSLongitude -GPSLatitude -LensID -ImageWidth -ImageHeight" +
+            json = processRunner.execute("sh", "-c", appProperties.getExifToolBinPath() + " -Software -GPSAltitude -GPSLongitude -GPSLatitude -LensID " +
+                    "-ImageWidth -ImageHeight" +
                     " -FocalLength -FocalLengthIn35mmFormat -ISO -Aperture -Model -Make -ShutterSpeed" +
                     " -CreateDate -DateTimeOriginal -json '" + fileData.getFullPath() + "'");
         } catch (Exception e) {

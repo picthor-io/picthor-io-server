@@ -5,7 +5,6 @@ plugins {
 }
 
 group = "io.picthor"
-version = "v1.0.0-beta-3"
 
 java {
     sourceCompatibility = JavaVersion.VERSION_17
@@ -88,5 +87,6 @@ tasks.withType<Test> {
 }
 
 tasks.withType<org.springframework.boot.gradle.tasks.bundling.BootJar>().configureEach {
+    this.archiveFileName.set("picthor-io-server.jar")
     launchScript()
 }

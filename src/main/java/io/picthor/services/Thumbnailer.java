@@ -60,16 +60,16 @@ public class Thumbnailer {
             if (FileData.RAW_EXTENSIONS.contains(fileData.getExtension().toUpperCase())) {
                 try {
                     // try raw: delegate
-                    processRunner.execute("sh", "-c", "convert 'raw:" + fileData.getFullPath() + "[1]' -thumbnail '"
+                    processRunner.execute("sh", "-c", appProperties.getConvertBinPath() + " 'raw:" + fileData.getFullPath() + "[1]' -thumbnail '"
                             + width + "x>' -gravity center -auto-orient '" + thumbPath + "'");
                 } catch (Exception e) {
                     // try automatic delegate
-                    processRunner.execute("sh", "-c", "convert '" + fileData.getFullPath() + "[1]' -thumbnail '"
+                    processRunner.execute("sh", "-c", appProperties.getConvertBinPath() + " '" + fileData.getFullPath() + "[1]' -thumbnail '"
                             + width + "x>' -gravity center -auto-orient '" + thumbPath + "'");
                 }
             } else {
                 // default to  automatic delegate
-                processRunner.execute("sh", "-c", "convert '" + fileData.getFullPath() + "[1]' -thumbnail '"
+                processRunner.execute("sh", "-c", appProperties.getConvertBinPath() + " '" + fileData.getFullPath() + "[1]' -thumbnail '"
                         + width + "x>' -gravity center -auto-orient '" + thumbPath + "'");
             }
         } catch (Exception e) {

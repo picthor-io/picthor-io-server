@@ -7,13 +7,14 @@ import com.realcnbs.horizon.framework.data.filter.FilterDefinition;
 import com.realcnbs.horizon.framework.data.filter.SortDefinition;
 import com.realcnbs.horizon.framework.data.mapper.EntityMapper;
 import io.picthor.data.entity.Directory;
-import io.picthor.data.mapper.FileDataMapper;
 import io.picthor.data.entity.FileData;
+import io.picthor.data.mapper.FileDataMapper;
 import io.picthor.services.DirectoryStatsService;
 import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Repository
 public class FileDataDao extends AbstractEntityDao<FileData> {
@@ -50,7 +51,7 @@ public class FileDataDao extends AbstractEntityDao<FileData> {
         return mapper.findAllFiltered(builder);
     }
 
-    public List<String> getAllExtensions(){
+    public List<Map<String, Object>> getAllExtensions() {
         return mapper.getAllExtensions();
     }
 
@@ -70,7 +71,7 @@ public class FileDataDao extends AbstractEntityDao<FileData> {
         filters.add(new FilterDefinition("directory_id", FieldFilter.CheckType.EQUALS, FilterDefinition.DataType.NUMBER));
         filters.add(new FilterDefinition("state", FieldFilter.CheckType.EQUALS, FilterDefinition.DataType.STRING));
         filters.add(new FilterDefinition("file_name", FieldFilter.CheckType.LIKE, FilterDefinition.DataType.STRING));
-        filters.add(new FilterDefinition("extension", FieldFilter.CheckType.EQUALS, FilterDefinition.DataType.STRING));
+        filters.add(new FilterDefinition("extension", FieldFilter.CheckType.IN, FilterDefinition.DataType.STRING));
         filters.add(new FilterDefinition("type", FieldFilter.CheckType.EQUALS, FilterDefinition.DataType.STRING));
         return filters;
     }

@@ -42,3 +42,7 @@ config:
   allowed-cors-origins: ${PICTHOR_CORS_ORIGINS:chrome-extension://aejoelaoggembcahagimdiliamlcdmfm,http://localhost:4200}
   cache-dir: ${PICTHOR_CACHE_DIR}
   threads-num: ${PICTHOR_THREADS_NUM:4}
+  convert-bin-path: ${PICTHOR_CONVERT_BIN_PATH:/usr/bin/convert}
+  exiftool-bin-path: ${PICTHOR_EXIFTOOL_BIN_PATH:/usr/bin/vendor_perl/exiftool}
+  xxhsum-bin-path: ${PICTHOR_XXHSUM_BIN_PATH:/usr/bin/xxhsum}
+  find-bin-path: ${PICTHOR_FIND_BIN_PATH:/usr/bin/find}

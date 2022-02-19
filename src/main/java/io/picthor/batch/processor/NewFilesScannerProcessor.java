@@ -243,7 +243,7 @@ public class NewFilesScannerProcessor extends AbstractBatchJobProcessor {
         StopWatch sw = new StopWatch();
         sw.start();
         log.debug("Executing: find {} -type d", rootDir.getFullPath());
-        String find = processRunner.execute("find", rootDir.getFullPath(), "-type", "d");
+        String find = processRunner.execute(appProperties.getFindBinPath(), rootDir.getFullPath(), "-type", "d");
         sw.stop();
         log.debug("Directories listing took: {}", DurationFormatUtils.formatDurationHMS(sw.getTotalTimeMillis()));
 

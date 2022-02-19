@@ -56,10 +56,11 @@
         SELECT file_data.id FROM file_data WHERE file_data.root_directory_id = #{id}
     </select>
 
-    <select id="getAllExtensions" resultType="String">
-        SELECT LOWER(extension) AS extension
+    <select id="getAllExtensions" resultType="Map">
+        SELECT extension AS extension, COUNT(*) count
         FROM file_data
-        GROUP BY LOWER(extension)
+        GROUP BY extension
+        ORDER BY count DESC, extension
     </select>
 
     <select id="findByFileName" resultMap="FileDataResult">

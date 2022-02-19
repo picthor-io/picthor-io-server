@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 
 @RequestMapping("/api/file-data")
 @RestController
@@ -40,7 +41,7 @@ public class FileDataController extends AbstractEntityController<FileData> {
     }
 
     @RequestMapping(value = "/extensions", method = RequestMethod.GET)
-    public List<String> getAllExtensions() {
+    public List<Map<String, Object>> getAllExtensions() {
         return fileDataDao.getAllExtensions();
     }
 

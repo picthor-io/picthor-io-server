@@ -15,6 +15,14 @@ public class AppProperties {
 
     private String cacheDir;
 
+    private String convertBinPath;
+
+    private String exifToolBinPath;
+
+    private String xxhsumBinPath;
+
+    private String findBinPath;
+
     private Integer threadsNum;
 
 }
