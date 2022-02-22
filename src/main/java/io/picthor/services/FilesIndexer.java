@@ -67,7 +67,7 @@ public class FilesIndexer {
 
     public String getFileHash(Path path) {
         try {
-            return processRunner.execute("sh", "-c", appProperties.getXxhsumBinPath() + " " + path.toString() + "' | awk '{print $1}'");
+            return processRunner.execute("sh", "-c", appProperties.getXxhsumBinPath() + " '" + path.toString() + "' | awk '{print $1}'");
         } catch (Exception e) {
             log.error("Failed to get file hash: {}", path.toString(), e);
         }
