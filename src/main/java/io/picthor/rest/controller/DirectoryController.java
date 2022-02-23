@@ -13,16 +13,16 @@ import io.picthor.data.dao.BatchJobDao;
 import io.picthor.data.dao.DirectoryDao;
 import io.picthor.data.entity.BatchJob;
 import io.picthor.data.entity.Directory;
+import io.picthor.rest.form.RootDirectoryForm;
+import io.picthor.rest.form.RootDirectoryFormProcessor;
 import io.picthor.rest.repr.BatchJobRepr;
 import io.picthor.rest.repr.DirectoryRepr;
 import io.picthor.services.JobCounter;
 import io.picthor.services.JobCounterService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
+import javax.validation.Valid;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -44,13 +44,21 @@ public class DirectoryController extends AbstractEntityController<Directory> {
 
     private final JobCounterService jobCounterService;
 
-    public DirectoryController(DirectoryDao DirectoryDao, BatchJobDao batchJobDao, NewFilesScannerProcessor newFilesScannerProcessor, DeletedFilesScannerProcessor deletedFilesScannerProcessor, BatchJobService batchJobService, JobCounterService jobCounterService) {
+    private final RootDirectoryFormProcessor formProcessor;
+
+    public DirectoryController(DirectoryDao DirectoryDao, BatchJobDao batchJobDao, NewFilesScannerProcessor newFilesScannerProcessor, DeletedFilesScannerProcessor deletedFilesScannerProcessor, BatchJobService batchJobService, JobCounterService jobCounterService, RootDirectoryFormProcessor formProcessor) {
         this.directoryDao = DirectoryDao;
         this.batchJobDao = batchJobDao;
         this.newFilesScannerProcessor = newFilesScannerProcessor;
         this.deletedFilesScannerProcessor = deletedFilesScannerProcessor;
         this.batchJobService = batchJobService;
         this.jobCounterService = jobCounterService;
+        this.formProcessor = formProcessor;
+    }
+
+    @RequestMapping(value = "", method = RequestMethod.POST)
+    public DirectoryRepr addRoot(@Valid @RequestBody RootDirectoryForm form) throws Exception {
+        return (DirectoryRepr) super.createAndWrapEntity(form);
     }
 
     @RequestMapping(value = "/{id}", method = RequestMethod.GET)
@@ -72,10 +80,10 @@ public class DirectoryController extends AbstractEntityController<Directory> {
         if (newFilesJob != null) {
             batchJobService.startJob(newFilesJob);
         }
-//        BatchJob deletedFilesJob = deletedFilesScannerProcessor.createJob(Map.of("directory", directory));
-//        if (deletedFilesJob != null) {
-//            batchJobService.startJob(deletedFilesJob);
-//        }
+        BatchJob deletedFilesJob = deletedFilesScannerProcessor.createJob(Map.of("directory", directory));
+        if (deletedFilesJob != null) {
+            batchJobService.startJob(deletedFilesJob);
+        }
 
         return new BatchJobRepr(newFilesJob);
     }
@@ -101,16 +109,6 @@ public class DirectoryController extends AbstractEntityController<Directory> {
         return reprs;
     }
 
-//    @RequestMapping(value = "/{id}/tree", method = RequestMethod.GET)
-//    public DirectoryRepr getTree(@PathVariable("id") Long id) throws Exception {
-//        Directory directory = directoryDao.findById(id);
-//        if(directory.getType() != Directory.Type.ROOT){
-//            throw new NotFoundException("Directory must be ROOT");
-//        }
-//        directoryDao.fetchTree(directory);
-//        return new DirectoryRepr(directory);
-//    }
-
     @RequestMapping(value = "", method = RequestMethod.GET)
     public PagedEntityRepr getAll(RestRequestFilter filter) throws Exception {
         return (PagedEntityRepr) super.getAllEntitiesReprs(filter);
@@ -123,6 +121,6 @@ public class DirectoryController extends AbstractEntityController<Directory> {
 
     @Override
     protected FormProcessor getFormProcessor() {
-        return null;
+        return formProcessor;
     }
 }

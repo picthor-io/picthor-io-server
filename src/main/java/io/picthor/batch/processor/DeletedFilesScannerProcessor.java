@@ -38,7 +38,8 @@ public class DeletedFilesScannerProcessor extends AbstractBatchJobProcessor {
 
     private final JobCounterService jobCounterService;
 
-    public DeletedFilesScannerProcessor(FileDataDao fileDataDao, BatchJobDao batchJobDao, BatchJobItemDao batchJobItemDao, AppProperties appProperties, ObjectMapper objectMapper, JobCounterService jobCounterService) {
+    public DeletedFilesScannerProcessor(FileDataDao fileDataDao, BatchJobDao batchJobDao, BatchJobItemDao batchJobItemDao, AppProperties appProperties,
+                                        ObjectMapper objectMapper, JobCounterService jobCounterService) {
         this.fileDataDao = fileDataDao;
         this.appProperties = appProperties;
         this.jobCounterService = jobCounterService;
@@ -58,12 +59,11 @@ public class DeletedFilesScannerProcessor extends AbstractBatchJobProcessor {
             });
             List<Long> ids = (List<Long>) params.get("ids");
             List<FileData> files = fileDataDao.findByIds(ids);
+            log.info("JOB: {} ITEM: {} Checking: {} files for existence", item.getBatchJobId(), item.getId(), files.size());
             for (FileData file : files) {
                 if (!Files.exists(Path.of(file.getFullPath()))) {
                     file.setSyncState(FileData.SyncState.MISSING);
                     fileDataDao.persist(file);
-                }else{
-
                 }
                 jobCounterService.incr(item.getBatchJobId());
                 item.setInternalProcessed(item.getInternalProcessed() + 1);
@@ -114,7 +114,8 @@ public class DeletedFilesScannerProcessor extends AbstractBatchJobProcessor {
         batchJobDao.persist(job);
 
 
-        log.info("JOB: {} Total: {} files to scan, creating batch job items based on threadsNum config: {}", job.getId(), filesIds.size(), appProperties.getThreadsNum());
+        log.info("JOB: {} Total: {} files to scan, creating batch job items based on threadsNum config: {}", job.getId(), filesIds.size(),
+                appProperties.getThreadsNum());
         int subSetSize = (int) (Math.ceil((filesIds.size() / appProperties.getThreadsNum()) / 10.0) * 10);
         List<List<Long>> subSets = ListUtils.partition(filesIds, subSetSize);
 

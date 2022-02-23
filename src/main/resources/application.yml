@@ -25,7 +25,7 @@ spring:
 logging:
   level:
     io.picthor: ${PICTHOR_LOG_LEVEL:DEBUG}
-    io.picthor.data.mapper: INFO
+    io.picthor.data.mapper: DEBUG
 #    io.picthor.data.mapper.FileDataMapper: INFO
 #    io.picthor.data.mapper.DirectoryMapper: INFO
 #    io.picthor.data.mapper.BatchJobItemMapper: INFO

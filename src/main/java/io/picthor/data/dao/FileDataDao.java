@@ -69,7 +69,7 @@ public class FileDataDao extends AbstractEntityDao<FileData> {
     public List<FilterDefinition> getAllowedFilters() {
         List<FilterDefinition> filters = super.getAllowedFilters();
         filters.add(new FilterDefinition("directory_id", FieldFilter.CheckType.EQUALS, FilterDefinition.DataType.NUMBER));
-        filters.add(new FilterDefinition("state", FieldFilter.CheckType.EQUALS, FilterDefinition.DataType.STRING));
+        filters.add(new FilterDefinition("sync_state", FieldFilter.CheckType.EQUALS, FilterDefinition.DataType.STRING));
         filters.add(new FilterDefinition("file_name", FieldFilter.CheckType.LIKE, FilterDefinition.DataType.STRING));
         filters.add(new FilterDefinition("extension", FieldFilter.CheckType.IN, FilterDefinition.DataType.STRING));
         filters.add(new FilterDefinition("type", FieldFilter.CheckType.EQUALS, FilterDefinition.DataType.STRING));
