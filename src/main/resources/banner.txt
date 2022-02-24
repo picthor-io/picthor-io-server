@@ -11,9 +11,15 @@ ${AnsiColor.YELLOW}                /_/
 ${AnsiColor.GREEN}VERSION:                                  ${PICTHOR_IO_APP_VERSION:UNKNOWN}
 ${AnsiColor.GREEN}PICTHOR_UI_STATIC_FILES_DIR:              ${PICTHOR_UI_STATIC_FILES_DIR}
 ${AnsiColor.GREEN}PICTHOR_CACHE_DIR:                        ${PICTHOR_CACHE_DIR}
-${AnsiColor.GREEN}PICTHOR_POSTGRES_JDBC_URL:                ${PICTHOR_POSTGRES_JDBC_URL:NOT SET IN ENV - USING DEFAULT}
-${AnsiColor.GREEN}PICTHOR_HIKARI_POOL_SIZE:                 ${PICTHOR_HIKARI_POOL_SIZE:NOT SET IN ENV - USING DEFAULT}
-${AnsiColor.GREEN}PICTHOR_THREADS_NUM:                      ${PICTHOR_THREADS_NUM:NOT SET IN ENV - USING DEFAULT}
-${AnsiColor.GREEN}PICTHOR_CORS_ORIGINS:                     ${PICTHOR_CORS_ORIGINS:NOT SET IN ENV - USING DEFAULT}
+${AnsiColor.GREEN}PICTHOR_LOG_LEVEL:                        ${PICTHOR_LOG_LEVEL:           NOT SET IN ENV, DEFAULT: DEBUG}
+${AnsiColor.GREEN}PICTHOR_POSTGRES_JDBC_URL:                ${PICTHOR_POSTGRES_JDBC_URL:   NOT SET IN ENV, DEFAULT: jdbc:postgresql://localhost:5432/picthor}
+${AnsiColor.GREEN}PICTHOR_HIKARI_POOL_SIZE:                 ${PICTHOR_HIKARI_POOL_SIZE:    NOT SET IN ENV, DEFAULT: 20}
+${AnsiColor.GREEN}PICTHOR_THREADS_NUM:                      ${PICTHOR_THREADS_NUM:         NOT SET IN ENV, DEFAULT: 4}
+${AnsiColor.GREEN}PICTHOR_CORS_ORIGINS:                     ${PICTHOR_CORS_ORIGINS:        NOT SET IN ENV, DEFAULT: chrome-extension://aejoelaoggembcahagimdiliamlcdmfm,http://localhost:4200}
+${AnsiColor.GREEN}$PICTHOR_WEB_ADDRESS:                     ${PICTHOR_CORS_ORIGINS:        NOT SET IN ENV}
+${AnsiColor.GREEN}PICTHOR_CONVERT_BIN_PATH                  ${PICTHOR_CONVERT_BIN_PATH:    NOT SET IN ENV, DEFAULT: /usr/bin/convert}
+${AnsiColor.GREEN}PICTHOR_EXIFTOOL_BIN_PATH                 ${PICTHOR_EXIFTOOL_BIN_PATH:   NOT SET IN ENV, DEFAULT: /usr/bin/vendor_perl/exiftool}
+${AnsiColor.GREEN}PICTHOR_XXHSUM_BIN_PATH                   ${PICTHOR_XXHSUM_BIN_PATH:     NOT SET IN ENV, DEFAULT: /usr/bin/xxhsum}
+${AnsiColor.GREEN}PICTHOR_FIND_BIN_PATH                     ${PICTHOR_FIND_BIN_PATH:       NOT SET IN ENV, DEFAULT: /usr/bin/find}
 
 ${AnsiColor.YELLOW}***********************************************************************************************************************}
