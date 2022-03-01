@@ -57,8 +57,18 @@ public class DeletedFilesScannerProcessor extends AbstractBatchJobProcessor {
         try {
             Map<String, Object> params = objectMapper.readValue(item.getPayload(), new TypeReference<>() {
             });
+
             List<Long> ids = (List<Long>) params.get("ids");
-            List<FileData> files = fileDataDao.findByIds(ids);
+            List<FileData> files = new ArrayList<>();
+            if (ids.size() >= Short.MAX_VALUE) {
+                List<List<Long>> subSets = ListUtils.partition(ids, Short.MAX_VALUE);
+                for (List<Long> subSet : subSets) {
+                    files.addAll(fileDataDao.findByIds(subSet));
+                }
+            } else {
+                files = fileDataDao.findByIds(ids);
+            }
+
             log.info("JOB: {} ITEM: {} Checking: {} files for existence", item.getBatchJobId(), item.getId(), files.size());
             for (FileData file : files) {
                 if (!Files.exists(Path.of(file.getFullPath()))) {
