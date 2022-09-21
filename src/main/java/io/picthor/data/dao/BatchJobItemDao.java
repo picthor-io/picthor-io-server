@@ -1,51 +1,74 @@
 package io.picthor.data.dao;
 
 import com.realcnbs.horizon.framework.data.dao.entity.AbstractEntityDao;
-import com.realcnbs.horizon.framework.data.filter.FieldFilter;
-import com.realcnbs.horizon.framework.data.filter.FilterBuilder;
-import com.realcnbs.horizon.framework.data.filter.FilterDefinition;
+import com.realcnbs.horizon.framework.data.mapper.EntityMapper;
 import io.picthor.data.entity.BatchJobItem;
-import io.picthor.data.mapper.BatchJobItemMapper;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Repository;
 
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 @Repository
 public class BatchJobItemDao extends AbstractEntityDao<BatchJobItem> {
 
-    private final BatchJobItemMapper batchJobItemMapper;
+    private final Map<Long, BatchJobItem> jobItemStore = new HashMap<>();
 
-    @Autowired
-    public BatchJobItemDao(BatchJobItemMapper batchJobItemMapper) {
-        this.batchJobItemMapper = batchJobItemMapper;
-    }
+    private final AtomicLong id = new AtomicLong();
 
     @Override
-    public BatchJobItemMapper getMapper() {
-        return batchJobItemMapper;
+    protected EntityMapper<BatchJobItem> getMapper() {
+        return null;
     }
 
-    @Async
-    public void persistAsync(BatchJobItem item) {
-        super.persist(item);
+    public void persist(BatchJobItem jobItem) {
+        if (jobItem.getId() == null) {
+            jobItem.setId(id.incrementAndGet());
+        }
+        jobItemStore.put(jobItem.getId(), jobItem);
     }
 
-    @Override
-    public List<FilterDefinition> getAllowedFilters() {
-        List<FilterDefinition> filters = new ArrayList<>();
-        filters.add(new FilterDefinition("id", FieldFilter.CheckType.EQUALS, FilterDefinition.DataType.NUMBER));
-        filters.add(new FilterDefinition("state", FieldFilter.CheckType.LIKE, FilterDefinition.DataType.STRING));
-        filters.add(new FilterDefinition("batchJobId", FieldFilter.CheckType.EQUALS, FilterDefinition.DataType.NUMBER));
-        return filters;
+    public void remove(BatchJobItem jobItem) {
+        jobItemStore.remove(jobItem.getId());
     }
 
-    public List<BatchJobItem> findByJobId(Long jobId){
-        FilterBuilder builder = FilterBuilder.instance();
-        builder.and("batch_job_id").eq(jobId);
-        return batchJobItemMapper.findAllFiltered(builder);
+    public BatchJobItem findById(Long jobItemId) {
+        return jobItemStore.values()
+                           .stream()
+                           .filter(jobItem -> jobItem.getId().equals(jobItemId))
+                           .findAny()
+                           .orElse(null);
     }
+
+    public List<BatchJobItem> findByJobId(Long jobId) {
+        return jobItemStore.values()
+                           .stream()
+                           .filter(jobItem -> jobItem.getBatchJobId().equals(jobId))
+                           .collect(Collectors.toList());
+    }
+
+
+//
+//    @Async
+//    public void persistAsync(BatchJobItem item) {
+//        super.persist(item);
+//    }
+//
+//    @Override
+//    public List<FilterDefinition> getAllowedFilters() {
+//        List<FilterDefinition> filters = new ArrayList<>();
+//        filters.add(new FilterDefinition("id", FieldFilter.CheckType.EQUALS, FilterDefinition.DataType.NUMBER));
+//        filters.add(new FilterDefinition("state", FieldFilter.CheckType.LIKE, FilterDefinition.DataType.STRING));
+//        filters.add(new FilterDefinition("batchJobId", FieldFilter.CheckType.EQUALS, FilterDefinition.DataType.NUMBER));
+//        return filters;
+//    }
+//
+//    public List<BatchJobItem> findByJobId(Long jobId){
+//        FilterBuilder builder = FilterBuilder.instance();
+//        builder.and("batch_job_id").eq(jobId);
+//        return batchJobItemMapper.findAllFiltered(builder);
+//    }
 
 }

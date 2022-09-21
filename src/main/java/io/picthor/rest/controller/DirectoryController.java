@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -46,8 +47,8 @@ public class DirectoryController extends AbstractEntityController<Directory> {
 
     private final RootDirectoryFormProcessor formProcessor;
 
-    public DirectoryController(DirectoryDao DirectoryDao, BatchJobDao batchJobDao, NewFilesScannerProcessor newFilesScannerProcessor, DeletedFilesScannerProcessor deletedFilesScannerProcessor, BatchJobService batchJobService, JobCounterService jobCounterService, RootDirectoryFormProcessor formProcessor) {
-        this.directoryDao = DirectoryDao;
+    public DirectoryController(DirectoryDao directoryDao, BatchJobDao batchJobDao, NewFilesScannerProcessor newFilesScannerProcessor, DeletedFilesScannerProcessor deletedFilesScannerProcessor, BatchJobService batchJobService, JobCounterService jobCounterService, RootDirectoryFormProcessor formProcessor) {
+        this.directoryDao = directoryDao;
         this.batchJobDao = batchJobDao;
         this.newFilesScannerProcessor = newFilesScannerProcessor;
         this.deletedFilesScannerProcessor = deletedFilesScannerProcessor;
@@ -68,6 +69,10 @@ public class DirectoryController extends AbstractEntityController<Directory> {
 
     @RequestMapping(value = "/{id}/sync", method = RequestMethod.POST)
     public BatchJobRepr syncDirectory(@PathVariable("id") Long id) throws Exception {
+
+        Collection c = new ArrayList();
+        List a = new ArrayList();
+
         Directory directory = directoryDao.findById(id);
         if (directory == null) {
             throw new NotFoundException("Directory not found");

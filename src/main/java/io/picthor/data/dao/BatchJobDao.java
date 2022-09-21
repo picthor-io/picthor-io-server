@@ -1,39 +1,61 @@
 package io.picthor.data.dao;
 
 import com.realcnbs.horizon.framework.data.dao.entity.AbstractEntityDao;
-import com.realcnbs.horizon.framework.data.filter.FilterBuilder;
+import com.realcnbs.horizon.framework.data.mapper.EntityMapper;
 import io.picthor.data.entity.BatchJob;
 import io.picthor.data.entity.Directory;
-import io.picthor.data.mapper.BatchJobMapper;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 @Repository
-public class BatchJobDao extends AbstractEntityDao<BatchJob> {
+public class BatchJobDao extends AbstractEntityDao<BatchJob>{
 
-    private final BatchJobMapper batchJobMapper;
+    private final Map<Long, BatchJob> jobStore = new HashMap<>();
 
-    @Autowired
-    public BatchJobDao(BatchJobMapper batchJobMapper) {
-        this.batchJobMapper = batchJobMapper;
+    private final AtomicLong id = new AtomicLong();
+
+    public List<BatchJob> findByRooDirectory(Directory directory) {
+        return jobStore.values()
+                       .stream()
+                       .filter(batchJob -> batchJob.getPayload().get("rootDirectoryId").equals(directory.getRootDirectoryId()))
+                       .collect(Collectors.toList());
     }
 
-    @Override
-    public BatchJobMapper getMapper() {
-        return batchJobMapper;
+    public void remove(BatchJob job) {
+        jobStore.remove(job.getId());
+    }
+
+    public void persist(BatchJob job) {
+        if (job.getId() == null) {
+            job.setId(id.incrementAndGet());
+        }
+        jobStore.put(job.getId(), job);
+    }
+
+    public BatchJob findById(Long jobId) {
+        return jobStore.values()
+                       .stream()
+                       .filter(batchJob -> batchJob.getId().equals(jobId))
+                       .findAny()
+                       .orElse(null);
     }
 
     public List<BatchJob> findAllByCreateDateInterval(LocalDateTime start, LocalDateTime end) {
-        FilterBuilder builder = FilterBuilder.instance();
-        builder.and("created_at").geq(start);
-        builder.and("created_at").leq(end);
-        return batchJobMapper.findAllFiltered(builder);
+        return jobStore.values()
+                       .stream()
+                       .filter(batchJob -> batchJob.getCreatedAt().isAfter(start) && batchJob.getCreatedAt().isBefore(end))
+                       .collect(Collectors.toList());
     }
 
-    public List<BatchJob> findByRooDirectory(Directory directory) {
-        return batchJobMapper.findByRooDirectoryId(String.valueOf(directory.getId()));
+    @Override
+    protected EntityMapper<BatchJob> getMapper() {
+        return null;
     }
+
 }

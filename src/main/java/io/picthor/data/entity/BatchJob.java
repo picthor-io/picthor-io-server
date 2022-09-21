@@ -5,7 +5,9 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -31,7 +33,7 @@ public class BatchJob extends AbstractEntity {
     private State state;
     private LocalDateTime processAt;
     private List<BatchJobItem> items;
-    private String payload;
+    private Map<String, Object> payload = new HashMap<>();
 
     public String getSafeName() {
         if (name == null) {

@@ -1,7 +1,5 @@
 package io.picthor.batch.processor;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.picthor.ProcessRunner;
 import io.picthor.batch.BatchProcessingException;
@@ -41,8 +39,6 @@ import java.util.stream.Stream;
 @Slf4j
 public class NewFilesScannerProcessor extends AbstractBatchJobProcessor {
 
-    private final ObjectMapper objectMapper;
-
     private final FilesIndexer filesIndexer;
 
     private final FileDataDao fileDataDao;
@@ -58,7 +54,7 @@ public class NewFilesScannerProcessor extends AbstractBatchJobProcessor {
     private final DirectoryStatsService statsService;
 
     @Autowired
-    public NewFilesScannerProcessor(BatchJobDao batchJobDao, BatchJobItemDao batchJobItemDao, ObjectMapper objectMapper, FilesIndexer filesIndexer,
+    public NewFilesScannerProcessor(BatchJobDao batchJobDao, BatchJobItemDao batchJobItemDao, FilesIndexer filesIndexer,
                                     FileDataDao fileDataDao,
                                     DirectoryDao directoryDao, JobCounterService jobCounterService,
                                     NotificationsService notificationsService, AppProperties appProperties1,
@@ -72,7 +68,76 @@ public class NewFilesScannerProcessor extends AbstractBatchJobProcessor {
         this.statsService = statsService;
         this.batchJobDao = batchJobDao;
         this.batchJobItemDao = batchJobItemDao;
-        this.objectMapper = objectMapper;
+    }
+
+    @Override
+    public BatchJob createJob(Map<String, Object> parameters) throws BatchProcessingException {
+        if (!parameters.containsKey("directory")) {
+            throw new BatchProcessingException("Job parameters must contain directory");
+        }
+        Directory rootDir = (Directory) parameters.get("directory");
+        log.info("Processing new files scanner batch job creation for root path: {}", rootDir.getFullPath());
+
+        // delete any previous jobs of same type
+        batchJobDao.findByRooDirectory(rootDir).stream()
+                   .filter(job -> job.getType() == BatchJob.Type.NEW_FILES_SCANNER)
+                   .forEach(job -> {
+                       log.debug("Deleting existing job: {}", job.getId());
+                       batchJobDao.remove(job);
+                   });
+
+        BatchJob job = new BatchJob();
+        job.setType(BatchJob.Type.NEW_FILES_SCANNER);
+        job.setState(BatchJob.State.NEW);
+        job.setName("Directories scan");
+        job.setProcessType(BatchJob.ProcessType.PARALLEL);
+        job.setProcessAt(LocalDateTime.now());
+        job.setItems(new ArrayList<>());
+        job.getPayload().put("rootDirectoryId", rootDir.getId());
+
+        batchJobDao.persist(job);
+
+        try {
+            List<Directory> directories = listAllDirectories(rootDir);
+            // add root as scanned dir too
+            directories.add(rootDir);
+
+            int subSetSize = (int) (Math.ceil((directories.size() / appProperties.getThreadsNum()) / 10.0) * 10);
+            List<List<Directory>> subSets = ListUtils.partition(directories, subSetSize);
+
+            log.info("JOB: {} Created {} sub sets of: {} items each", job.getId(),
+                    subSets.size(), subSets.stream().map(List::size).collect(Collectors.toList()));
+            int i = 1;
+            for (List<Directory> subSet : subSets) {
+                BatchJobItem item = new BatchJobItem();
+                item.setBatchJobId(job.getId());
+                item.setBatchJob(job);
+                item.setState(BatchJobItem.State.NEW);
+                item.getPayload().put("rootDirectoryId", rootDir.getId());
+                item.getPayload().put("directoriesPaths", subSet.stream().map(Directory::getFullPath).collect(Collectors.toList()));
+                item.setPositionInQueue(i++);
+                item.setProcessAt(job.getProcessAt());
+                item.setFirstInQueue(false);
+                item.setLastInQueue(false);
+                item.setInternalTotal(subSet.size());
+                item.setInternalProcessed(0);
+                batchJobItemDao.persist(item);
+                job.getItems().add(item);
+                log.info("JOB: {} Created job item for: {} directories", job.getId(), subSet.size());
+            }
+        } catch (Exception e) {
+            throw new BatchProcessingException("JOB: " + job.getId() + " Failed to scan for directories", e);
+        }
+
+        job.setTotalItems(job.getItems().size());
+        batchJobDao.persist(job);
+
+        return job;
+    }
+
+    @Override
+    public void cleanup(BatchJob batchJob) throws BatchProcessingException {
+        //
     }
 
     @Override
@@ -82,11 +147,9 @@ public class NewFilesScannerProcessor extends AbstractBatchJobProcessor {
         batchJobItemDao.persist(item);
 
         try {
-            Map<String, Object> params = objectMapper.readValue(item.getPayload(), new TypeReference<>() {
-            });
 
-            List<String> directoriesPaths = (List<String>) params.get("directoriesPaths");
-            Long rootDirectoryId = Long.valueOf((Integer) params.get("rootDirectoryId"));
+            List<String> directoriesPaths = (List<String>) item.getPayload().get("directoriesPaths");
+            Long rootDirectoryId = Long.valueOf((Long) item.getPayload().get("rootDirectoryId"));
 
             List<Directory> directories = new ArrayList<>();
             List<List<String>> subSets = ListUtils.partition(directoriesPaths, Short.MAX_VALUE);
@@ -118,19 +181,19 @@ public class NewFilesScannerProcessor extends AbstractBatchJobProcessor {
                     log.info("JOB: {} ITEM: {} found: {} files in directory: {}", item.getBatchJobId(), item.getId(), paths.size(), directory.getFullPath());
 
                     paths.stream()
-                            .filter(Objects::nonNull)
-                            .forEach(path -> {
-                                FileData fileData = fileDataDao.findByFullPath(path.toString());
-                                if (fileData == null) {
-                                    try {
-                                        fileData = filesIndexer.index(path);
-                                        fileData.setRootDirectoryId(rootDirectoryId);
-                                        fileDataDao.persist(fileData);
-                                    } catch (IOException e) {
-                                        log.error("JOB: {} ITEM: {} failed to to index file: {}", item.getBatchJobId(), item.getId(), path, e);
-                                    }
-                                }
-                            });
+                         .filter(Objects::nonNull)
+                         .forEach(path -> {
+                             FileData fileData = fileDataDao.findByFullPath(path.toString());
+                             if (fileData == null) {
+                                 try {
+                                     fileData = filesIndexer.index(path);
+                                     fileData.setRootDirectoryId(rootDirectoryId);
+                                     fileDataDao.persist(fileData);
+                                 } catch (IOException e) {
+                                     log.error("JOB: {} ITEM: {} failed to to index file: {}", item.getBatchJobId(), item.getId(), path, e);
+                                 }
+                             }
+                         });
 
                     // count each directory as internal process unit
                     item.setInternalProcessed(item.getInternalProcessed() + 1);
@@ -153,90 +216,6 @@ public class NewFilesScannerProcessor extends AbstractBatchJobProcessor {
         } catch (Exception e) {
             log.error("JOB: " + item.getBatchJobId() + " ITEM: " + item.getId() + " Failed to process job item", e);
         }
-    }
-
-    @Override
-    public BatchJob createJob(Map<String, Object> parameters) throws BatchProcessingException {
-        if (!parameters.containsKey("directory")) {
-            throw new BatchProcessingException("Job parameters must contain directory");
-        }
-        Directory rootDir = (Directory) parameters.get("directory");
-        log.info("Processing new files scanner batch job creation for root path: {}", rootDir.getFullPath());
-
-        // delete any previous jobs of same type
-        batchJobDao.findByRooDirectory(rootDir).stream()
-                .filter(job -> job.getType() == BatchJob.Type.NEW_FILES_SCANNER)
-                .forEach(job -> {
-                    log.debug("Deleting existing job: {}", job.getId());
-                    batchJobDao.remove(job);
-                });
-
-        BatchJob job = new BatchJob();
-        job.setType(BatchJob.Type.NEW_FILES_SCANNER);
-        job.setState(BatchJob.State.NEW);
-        job.setName("Directories scan");
-        job.setProcessType(BatchJob.ProcessType.PARALLEL);
-        job.setProcessAt(LocalDateTime.now());
-        job.setItems(new ArrayList<>());
-        try {
-            job.setPayload(objectMapper.writeValueAsString(
-                            Map.of(
-                                    "rootDirectoryId", rootDir.getId())
-                    )
-            );
-        } catch (JsonProcessingException e) {
-            throw new BatchProcessingException("JOB: " + job.getId() + " Failed to create batch job", e);
-        }
-
-        batchJobDao.persist(job);
-
-        try {
-            List<Directory> directories = listAllDirectories(rootDir);
-            // add root as scanned dir too
-            directories.add(rootDir);
-
-            int subSetSize = (int) (Math.ceil((directories.size() / appProperties.getThreadsNum()) / 10.0) * 10);
-            List<List<Directory>> subSets = ListUtils.partition(directories, subSetSize);
-
-            log.info("JOB: {} Created {} sub sets of: {} items each", job.getId(),
-                    subSets.size(), subSets.stream().map(List::size).collect(Collectors.toList()));
-            int i = 1;
-            for (List<Directory> subSet : subSets) {
-                BatchJobItem item = new BatchJobItem();
-                item.setBatchJobId(job.getId());
-                item.setBatchJob(job);
-                item.setState(BatchJobItem.State.NEW);
-                try {
-                    item.setPayload(
-                            objectMapper.writeValueAsString(
-                                    Map.of(
-                                            "rootDirectoryId", rootDir.getId(),
-                                            "directoriesPaths", subSet.stream().map(Directory::getFullPath).collect(Collectors.toList())
-
-                                    )
-                            )
-                    );
-                } catch (JsonProcessingException e) {
-                    throw new BatchProcessingException("JOB: " + job.getId() + " Failed to create batch job", e);
-                }
-                item.setPositionInQueue(i++);
-                item.setProcessAt(job.getProcessAt());
-                item.setFirstInQueue(false);
-                item.setLastInQueue(false);
-                item.setInternalTotal(subSet.size());
-                item.setInternalProcessed(0);
-                batchJobItemDao.persist(item);
-                job.getItems().add(item);
-                log.info("JOB: {} Created job item for: {} directories", job.getId(), subSet.size());
-            }
-        } catch (Exception e) {
-            throw new BatchProcessingException("JOB: " + job.getId() + " Failed to scan for directories", e);
-        }
-
-        job.setTotalItems(job.getItems().size());
-        batchJobDao.persist(job);
-
-        return job;
     }
 
     private List<Directory> listAllDirectories(Directory rootDir) throws Exception {
@@ -290,14 +269,9 @@ public class NewFilesScannerProcessor extends AbstractBatchJobProcessor {
 //        String find = processRunner.execute("find", "-printf", "{\\\"size\\\":%s\\, filename\\\": \\\"%p\\\"},\n");
         try (Stream<Path> stream = Files.walk(Paths.get(dir), 1)) {
             return stream.filter(path -> !Files.isDirectory(path))
-                    .filter(path -> !existingPaths.contains(path.toString()))
-                    .toList()
+                         .filter(path -> !existingPaths.contains(path.toString()))
+                         .toList()
                     ;
         }
-    }
-
-    @Override
-    public void cleanup(BatchJob batchJob) throws BatchProcessingException {
-        //
     }
 }

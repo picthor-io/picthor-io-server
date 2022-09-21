@@ -6,6 +6,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -24,7 +26,7 @@ public class BatchJobItem extends AbstractEntity {
     private Long prevItemId;
     private RelationType relationType;
     private Long relatedId;
-    private String payload;
+    private Map<String, Object> payload = new HashMap<>();
     private Boolean lastInQueue;
     private Boolean firstInQueue;
     private Integer positionInQueue;
