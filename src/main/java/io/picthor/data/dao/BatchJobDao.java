@@ -7,6 +7,7 @@ import io.picthor.data.entity.Directory;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,7 +24,7 @@ public class BatchJobDao extends AbstractEntityDao<BatchJob>{
     public List<BatchJob> findByRooDirectory(Directory directory) {
         return jobStore.values()
                        .stream()
-                       .filter(batchJob -> batchJob.getPayload().get("rootDirectoryId").equals(directory.getRootDirectoryId()))
+                       .filter(batchJob -> batchJob.getPayload().get("rootDirectoryId").equals(directory.getId()))
                        .collect(Collectors.toList());
     }
 
@@ -51,6 +52,11 @@ public class BatchJobDao extends AbstractEntityDao<BatchJob>{
                        .stream()
                        .filter(batchJob -> batchJob.getCreatedAt().isAfter(start) && batchJob.getCreatedAt().isBefore(end))
                        .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<BatchJob> findAll() {
+        return new ArrayList<>(jobStore.values());
     }
 
     @Override

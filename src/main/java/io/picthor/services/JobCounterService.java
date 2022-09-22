@@ -2,7 +2,6 @@ package io.picthor.services;
 
 import io.picthor.data.dao.BatchJobDao;
 import io.picthor.data.dao.BatchJobItemDao;
-import io.picthor.data.dao.DirectoryDao;
 import io.picthor.data.entity.BatchJob;
 import io.picthor.data.entity.BatchJobItem;
 import lombok.Getter;
@@ -27,7 +26,7 @@ public class JobCounterService {
     @Getter
     private final Map<Long, JobCounter> counters = new HashMap<>();
 
-    public JobCounterService(BatchJobItemDao batchJobItemDao, BatchJobDao batchJobDao, DirectoryDao directoryDao, NotificationsService notificationsService) {
+    public JobCounterService(BatchJobItemDao batchJobItemDao, BatchJobDao batchJobDao, NotificationsService notificationsService) {
         this.batchJobItemDao = batchJobItemDao;
         this.batchJobDao = batchJobDao;
         this.notificationsService = notificationsService;
@@ -63,23 +62,28 @@ public class JobCounterService {
                     log.debug("JOB: {} is finished", jobId);
                     finishedJobs.add(jobId);
                     BatchJob job = batchJobDao.findById(jobId);
-                    job.setState(BatchJob.State.PROCESSED);
-                    items.stream().peek(batchJobItemDao::remove);
-                    batchJobDao.persist(job);
+                    if (job != null) {
+                        job.setState(BatchJob.State.PROCESSED);
+                        items.stream().peek(batchJobItemDao::remove);
+                        batchJobDao.persist(job);
+                    }
                 }
             }
         } catch (Exception e) {
             log.error("Failed to update job counters", e);
         }
 
-        if(!finishedJobs.isEmpty()){
+        if (!finishedJobs.isEmpty()) {
             for (Long jobId : finishedJobs) {
                 JobCounter counter = counters.get(jobId);
-                if (counter.getTotal() > 0) {
-                    notificationsService.addSuccess("Job \"" + jobId + "\" processing is finished",
-                            "Total files processed: " + counter.getTotal());
+                BatchJob job = batchJobDao.findById(jobId);
+                if (job != null) {
+                    if (counter.getTotal() > 0) {
+                        notificationsService.addSuccess(job.getName() + " is finished", "Total files processed: " + counter.getTotal());
+                    }
+                    counters.remove(jobId);
+                    batchJobDao.remove(job);
                 }
-                counters.remove(jobId);
             }
         }
     }

@@ -8,7 +8,7 @@ import com.realcnbs.horizon.framework.rest.form.processor.FormProcessor;
 import com.realcnbs.horizon.framework.rest.repr.PagedEntityRepr;
 import io.picthor.batch.BatchJobService;
 import io.picthor.batch.processor.DeletedFilesScannerProcessor;
-import io.picthor.batch.processor.NewFilesScannerProcessor;
+import io.picthor.batch.processor.DirectoryTreeScannerProcessor;
 import io.picthor.data.dao.BatchJobDao;
 import io.picthor.data.dao.DirectoryDao;
 import io.picthor.data.entity.BatchJob;
@@ -24,7 +24,6 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -37,7 +36,7 @@ public class DirectoryController extends AbstractEntityController<Directory> {
 
     private final BatchJobDao batchJobDao;
 
-    private final NewFilesScannerProcessor newFilesScannerProcessor;
+    private final DirectoryTreeScannerProcessor directoryTreeScannerProcessor;
 
     private final DeletedFilesScannerProcessor deletedFilesScannerProcessor;
 
@@ -47,10 +46,10 @@ public class DirectoryController extends AbstractEntityController<Directory> {
 
     private final RootDirectoryFormProcessor formProcessor;
 
-    public DirectoryController(DirectoryDao directoryDao, BatchJobDao batchJobDao, NewFilesScannerProcessor newFilesScannerProcessor, DeletedFilesScannerProcessor deletedFilesScannerProcessor, BatchJobService batchJobService, JobCounterService jobCounterService, RootDirectoryFormProcessor formProcessor) {
+    public DirectoryController(DirectoryDao directoryDao, BatchJobDao batchJobDao, DirectoryTreeScannerProcessor directoryTreeScannerProcessor, DeletedFilesScannerProcessor deletedFilesScannerProcessor, BatchJobService batchJobService, JobCounterService jobCounterService, RootDirectoryFormProcessor formProcessor) {
         this.directoryDao = directoryDao;
         this.batchJobDao = batchJobDao;
-        this.newFilesScannerProcessor = newFilesScannerProcessor;
+        this.directoryTreeScannerProcessor = directoryTreeScannerProcessor;
         this.deletedFilesScannerProcessor = deletedFilesScannerProcessor;
         this.batchJobService = batchJobService;
         this.jobCounterService = jobCounterService;
@@ -69,10 +68,6 @@ public class DirectoryController extends AbstractEntityController<Directory> {
 
     @RequestMapping(value = "/{id}/sync", method = RequestMethod.POST)
     public BatchJobRepr syncDirectory(@PathVariable("id") Long id) throws Exception {
-
-        Collection c = new ArrayList();
-        List a = new ArrayList();
-
         Directory directory = directoryDao.findById(id);
         if (directory == null) {
             throw new NotFoundException("Directory not found");
@@ -81,7 +76,7 @@ public class DirectoryController extends AbstractEntityController<Directory> {
             throw new Exception("Directory must be root");
         }
 
-        BatchJob newFilesJob = newFilesScannerProcessor.createJob(Map.of("directory", directory));
+        BatchJob newFilesJob = directoryTreeScannerProcessor.createJob(Map.of("directory", directory));
         if (newFilesJob != null) {
             batchJobService.startJob(newFilesJob);
         }

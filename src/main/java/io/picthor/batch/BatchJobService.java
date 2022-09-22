@@ -1,6 +1,7 @@
 package io.picthor.batch;
 
 import io.picthor.batch.processor.DeletedFilesScannerProcessor;
+import io.picthor.batch.processor.DirectoryTreeScannerProcessor;
 import io.picthor.batch.processor.NewFilesScannerProcessor;
 import io.picthor.data.dao.BatchJobDao;
 import io.picthor.data.dao.BatchJobItemDao;
@@ -12,6 +13,7 @@ import io.picthor.services.JobCounterService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.quartz.*;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StopWatch;
 
@@ -24,7 +26,6 @@ import java.util.Map;
 
 import static org.quartz.JobBuilder.newJob;
 import static org.quartz.TriggerBuilder.newTrigger;
-
 
 @Service
 @Slf4j
@@ -40,6 +41,8 @@ public class BatchJobService {
 
     private final DeletedFilesScannerProcessor deletedFilesScannerProcessor;
 
+    private final DirectoryTreeScannerProcessor directoryTreeScannerProcessor;
+
     private final JobCounterService jobCounterService;
 
     private final DirectoryDao directoryDao;
@@ -49,12 +52,14 @@ public class BatchJobService {
             BatchJobItemDao batchJobItemDao,
             Scheduler scheduler,
             NewFilesScannerProcessor newFilesScannerProcessor,
-            DeletedFilesScannerProcessor deletedFilesScannerProcessor, JobCounterService jobCounterService, DirectoryDao directoryDao) {
+            DeletedFilesScannerProcessor deletedFilesScannerProcessor, DirectoryTreeScannerProcessor directoryTreeScannerProcessor,
+            JobCounterService jobCounterService, DirectoryDao directoryDao) {
         this.batchJobDao = batchJobDao;
         this.batchJobItemDao = batchJobItemDao;
         this.scheduler = scheduler;
         this.newFilesScannerProcessor = newFilesScannerProcessor;
         this.deletedFilesScannerProcessor = deletedFilesScannerProcessor;
+        this.directoryTreeScannerProcessor = directoryTreeScannerProcessor;
         this.jobCounterService = jobCounterService;
         this.directoryDao = directoryDao;
     }
@@ -65,17 +70,29 @@ public class BatchJobService {
         unScheduleJobItems(items);
         switch (batchJob.getType()) {
             case NEW_FILES_SCANNER -> newFilesScannerProcessor.cleanup(batchJob);
+            case DIRECTORY_TREE_SCANNER -> directoryTreeScannerProcessor.cleanup(batchJob);
             case DELETED_FILES_SCANNER -> deletedFilesScannerProcessor.cleanup(batchJob);
         }
         batchJob.setState(BatchJob.State.ARCHIVED);
         batchJobDao.persist(batchJob);
     }
 
-    public void removeExpired(LocalDateTime start, LocalDateTime end) throws BatchProcessingException {
-        List<BatchJob> batchJobs = batchJobDao.findAllByCreateDateInterval(start, end);
+//    @Scheduled(fixedRate = 1000)
+//    public void removeExpired(LocalDateTime start, LocalDateTime end) throws BatchProcessingException {
+//        List<BatchJob> batchJobs = batchJobDao.findAllByCreateDateInterval(start, end);
+//        for (BatchJob batchJob : batchJobs) {
+//            deleteJob(batchJob);
+//            batchJobDao.remove(batchJob);
+//        }
+//    }
+
+    @Scheduled(fixedRate = 1000)
+    public void startScheduled() throws BatchProcessingException {
+        List<BatchJob> batchJobs = batchJobDao.findAll();
         for (BatchJob batchJob : batchJobs) {
-            deleteJob(batchJob);
-            batchJobDao.remove(batchJob);
+            if (batchJob.getState() == BatchJob.State.NEW && batchJob.getProcessAt().isBefore(LocalDateTime.now())) {
+                startJob(batchJob);
+            }
         }
     }
 
@@ -96,6 +113,7 @@ public class BatchJobService {
             switch (item.getBatchJob().getType()) {
                 case NEW_FILES_SCANNER -> newFilesScannerProcessor.processItem(item);
                 case DELETED_FILES_SCANNER -> deletedFilesScannerProcessor.processItem(item);
+                case DIRECTORY_TREE_SCANNER -> directoryTreeScannerProcessor.processItem(item);
             }
         } catch (Exception e) {
             log.error("JOB: " + item.getBatchJobId() + " ITEM: " + item.getId() + " Failed to process batch job item", e);
@@ -105,7 +123,8 @@ public class BatchJobService {
             sw.stop();
             item.setDuration(sw.getTotalTimeMillis());
             item.setState(BatchJobItem.State.PROCESSED);
-            log.info("JOB: {} ITEM: {} Processed item in: {} ms", item.getBatchJobId(), item.getId(), DurationFormatUtils.formatDurationHMS(item.getDuration()));
+            log.info("JOB: {} ITEM: {} Processed item in: {} ms", item.getBatchJobId(), item.getId(),
+                    DurationFormatUtils.formatDurationHMS(item.getDuration()));
             batchJobItemDao.persist(item);
             if (item.getLastInQueue()) {
                 log.info("JOB: {} ITEM: {} Processed last item, setting job to PROCESSED state", item.getBatchJobId(), item.getId());
@@ -113,7 +132,8 @@ public class BatchJobService {
                 batchJobDao.persist(item.getBatchJob());
             } else {
                 if (item.getBatchJob().getProcessType() == BatchJob.ProcessType.QUEUE) {
-                    log.info("JOB: {} ITEM: {} Scheduling next batch job item: {} to process immediately", item.getBatchJobId(), item.getId(), item.getNextItemId());
+                    log.info("JOB: {} ITEM: {} Scheduling next batch job item: {} to process immediately", item.getBatchJobId(), item.getId(),
+                            item.getNextItemId());
                     BatchJobItem nextItem = batchJobItemDao.findById(item.getNextItemId());
                     nextItem.setProcessAt(LocalDateTime.now());
                     batchJobItemDao.persist(nextItem);
@@ -128,13 +148,39 @@ public class BatchJobService {
         List<BatchJob> jobs = new ArrayList<>();
         try {
             for (Directory directory : directoryDao.findAll()) {
-                BatchJob job = newFilesScannerProcessor.createJob(Map.of("directory", directory));
+                BatchJob job = directoryTreeScannerProcessor.createJob(Map.of("directory", directory));
                 jobs.add(job);
             }
         } catch (Exception e) {
             throw new BatchProcessingException("Failed to obtain root paths", e);
         }
         return jobs;
+    }
+
+    public void startJob(BatchJob batchJob) {
+        batchJob.setState(BatchJob.State.PROCESSING);
+        batchJobDao.persist(batchJob);
+        List<BatchJobItem> items = batchJobItemDao.findByJobId(batchJob.getId());
+        jobCounterService.init(batchJob.getId(), items.stream().mapToInt(BatchJobItem::getInternalTotal).sum());
+        log.info("JOB: {} Starting {} job, items to process: {}", batchJob.getId(), batchJob.getProcessType(), items.size());
+
+        switch (batchJob.getProcessType()) {
+            case PARALLEL:
+                for (BatchJobItem item : items) {
+                    item.setBatchJob(batchJob);
+                    scheduleJobItem(item, item.getProcessAt());
+                }
+                break;
+            case QUEUE:
+                for (BatchJobItem item : items) {
+                    if (item.getFirstInQueue()) {
+                        item.setBatchJob(batchJob);
+                        scheduleJobItem(item, LocalDateTime.now());
+                        break;
+                    }
+                }
+                break;
+        }
     }
 
     private void scheduleJobItem(BatchJobItem item, LocalDateTime runAt) {
@@ -168,32 +214,6 @@ public class BatchJobService {
             scheduler.deleteJobs(keys);
         } catch (SchedulerException e) {
             // ignore
-        }
-    }
-
-    public void startJob(BatchJob batchJob) {
-        batchJob.setState(BatchJob.State.PROCESSING);
-        batchJobDao.persist(batchJob);
-        List<BatchJobItem> items = batchJobItemDao.findByJobId(batchJob.getId());
-        jobCounterService.init(batchJob.getId(), items.stream().mapToInt(BatchJobItem::getInternalTotal).sum());
-        log.info("JOB: {} Starting {} job, items to process: {}", batchJob.getId(), batchJob.getProcessType(), items.size());
-
-        switch (batchJob.getProcessType()) {
-            case PARALLEL:
-                for (BatchJobItem item : items) {
-                    item.setBatchJob(batchJob);
-                    scheduleJobItem(item, item.getProcessAt());
-                }
-                break;
-            case QUEUE:
-                for (BatchJobItem item : items) {
-                    if (item.getFirstInQueue()) {
-                        item.setBatchJob(batchJob);
-                        scheduleJobItem(item, LocalDateTime.now());
-                        break;
-                    }
-                }
-                break;
         }
     }
 

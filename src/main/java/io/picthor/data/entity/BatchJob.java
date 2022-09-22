@@ -14,7 +14,7 @@ import java.util.Map;
 public class BatchJob extends AbstractEntity {
 
     public enum Type {
-        NEW_FILES_SCANNER, DELETED_FILES_SCANNER
+        NEW_FILES_SCANNER, DELETED_FILES_SCANNER, DIRECTORY_TREE_SCANNER
     }
 
     public enum ProcessType {

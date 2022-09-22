@@ -1,7 +1,5 @@
 package io.picthor.batch.processor;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.picthor.ProcessRunner;
 import io.picthor.batch.BatchProcessingException;
 import io.picthor.config.AppProperties;
 import io.picthor.data.dao.BatchJobDao;
@@ -15,7 +13,6 @@ import io.picthor.data.entity.FileData;
 import io.picthor.services.DirectoryStatsService;
 import io.picthor.services.FilesIndexer;
 import io.picthor.services.JobCounterService;
-import io.picthor.services.NotificationsService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.time.DurationFormatUtils;
@@ -49,22 +46,19 @@ public class NewFilesScannerProcessor extends AbstractBatchJobProcessor {
 
     private final AppProperties appProperties;
 
-    private final ProcessRunner processRunner;
-
     private final DirectoryStatsService statsService;
 
     @Autowired
     public NewFilesScannerProcessor(BatchJobDao batchJobDao, BatchJobItemDao batchJobItemDao, FilesIndexer filesIndexer,
                                     FileDataDao fileDataDao,
                                     DirectoryDao directoryDao, JobCounterService jobCounterService,
-                                    NotificationsService notificationsService, AppProperties appProperties1,
-                                    ProcessRunner processRunner1, DirectoryStatsService statsService) {
+                                    AppProperties appProperties,
+                                    DirectoryStatsService statsService) {
         this.filesIndexer = filesIndexer;
         this.fileDataDao = fileDataDao;
         this.directoryDao = directoryDao;
         this.jobCounterService = jobCounterService;
-        this.appProperties = appProperties1;
-        this.processRunner = processRunner1;
+        this.appProperties = appProperties;
         this.statsService = statsService;
         this.batchJobDao = batchJobDao;
         this.batchJobItemDao = batchJobItemDao;
@@ -76,7 +70,13 @@ public class NewFilesScannerProcessor extends AbstractBatchJobProcessor {
             throw new BatchProcessingException("Job parameters must contain directory");
         }
         Directory rootDir = (Directory) parameters.get("directory");
-        log.info("Processing new files scanner batch job creation for root path: {}", rootDir.getFullPath());
+
+        if (!parameters.containsKey("directories")) {
+            throw new BatchProcessingException("Job parameters must contain directories list");
+        }
+        List<Directory> directories = (List<Directory>) parameters.get("directories");
+
+        log.info("Processing new files scanner batch job creation for root path: {} containing: {} directories", rootDir.getFullPath(), directories.size());
 
         // delete any previous jobs of same type
         batchJobDao.findByRooDirectory(rootDir).stream()
@@ -94,14 +94,9 @@ public class NewFilesScannerProcessor extends AbstractBatchJobProcessor {
         job.setProcessAt(LocalDateTime.now());
         job.setItems(new ArrayList<>());
         job.getPayload().put("rootDirectoryId", rootDir.getId());
-
         batchJobDao.persist(job);
 
         try {
-            List<Directory> directories = listAllDirectories(rootDir);
-            // add root as scanned dir too
-            directories.add(rootDir);
-
             int subSetSize = (int) (Math.ceil((directories.size() / appProperties.getThreadsNum()) / 10.0) * 10);
             List<List<Directory>> subSets = ListUtils.partition(directories, subSetSize);
 
@@ -218,52 +213,6 @@ public class NewFilesScannerProcessor extends AbstractBatchJobProcessor {
         }
     }
 
-    private List<Directory> listAllDirectories(Directory rootDir) throws Exception {
-        StopWatch sw = new StopWatch();
-        sw.start();
-        log.debug("Executing: find {} -type d", rootDir.getFullPath());
-        String find = processRunner.execute(appProperties.getFindBinPath(), rootDir.getFullPath(), "-type", "d");
-        sw.stop();
-        log.debug("Directories listing took: {}", DurationFormatUtils.formatDurationHMS(sw.getTotalTimeMillis()));
-
-        Path rootPath = Paths.get(rootDir.getFullPath());
-
-        sw.start();
-        String[] lines = find.split("\n");
-        List<Directory> existing = directoryDao.findByFullPath(List.of(lines));
-
-        try (Stream<String> stream = Stream.of(lines)) {
-            log.debug("Found: {} directories", lines.length);
-            stream
-                    .map(Path::of)
-                    .distinct()
-                    .filter(path -> existing.stream().noneMatch(d -> d.getFullPath().equalsIgnoreCase(path.toString())))
-                    .forEach(path -> {
-                        if (!path.equals(rootPath)) {
-                            Directory directory = new Directory();
-                            directory.setFullPath(path.toAbsolutePath().toString());
-                            directory.setName(path.getFileName().toString());
-                            directory.setState(Directory.State.ENABLED);
-                            directory.setType(Directory.Type.STANDARD);
-                            directory.setRootDirectoryId(rootDir.getId());
-                            directoryDao.persist(directory);
-                        }
-                    });
-
-            // update all the directories parent ids
-            List<Directory> directories = directoryDao.findByType(Directory.Type.STANDARD);
-            for (Directory directory : directories) {
-                Directory parent = directoryDao.findByFullPath(Path.of(directory.getFullPath()).getParent().toString());
-                if (parent != null) {
-                    directory.setParentId(parent.getId());
-                    directoryDao.persist(directory);
-                }
-            }
-            sw.stop();
-            log.debug("Initialised: {} directories in: {}", directories.size(), DurationFormatUtils.formatDurationHMS(sw.getTotalTimeMillis()));
-            return directories;
-        }
-    }
 
     private List<Path> listFilesUsingFileWalk(String dir, List<String> existingPaths) throws IOException {
 //        String find = processRunner.execute("find", "-printf", "{\\\"size\\\":%s\\, filename\\\": \\\"%p\\\"},\n");
