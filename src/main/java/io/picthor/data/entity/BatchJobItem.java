@@ -36,6 +36,7 @@ public class BatchJobItem extends AbstractEntity {
     private State state;
     private Integer internalTotal;
     private Integer internalProcessed;
+    private Long rootDirectoryId;
 
     public BatchJob getBatchJob() {
         return batchJob;

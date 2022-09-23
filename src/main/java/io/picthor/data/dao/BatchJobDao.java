@@ -6,7 +6,6 @@ import io.picthor.data.entity.BatchJob;
 import io.picthor.data.entity.Directory;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -15,7 +14,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 @Repository
-public class BatchJobDao extends AbstractEntityDao<BatchJob>{
+public class BatchJobDao extends AbstractEntityDao<BatchJob> {
 
     private final Map<Long, BatchJob> jobStore = new HashMap<>();
 
@@ -24,12 +23,13 @@ public class BatchJobDao extends AbstractEntityDao<BatchJob>{
     public List<BatchJob> findByRooDirectory(Directory directory) {
         return jobStore.values()
                        .stream()
-                       .filter(batchJob -> batchJob.getPayload().get("rootDirectoryId").equals(directory.getId()))
+                       .filter(batchJob -> batchJob.getRootDirectoryId().equals(directory.getId()))
                        .collect(Collectors.toList());
     }
 
-    public void remove(BatchJob job) {
-        jobStore.remove(job.getId());
+    @Override
+    protected EntityMapper<BatchJob> getMapper() {
+        return null;
     }
 
     public void persist(BatchJob job) {
@@ -39,29 +39,22 @@ public class BatchJobDao extends AbstractEntityDao<BatchJob>{
         jobStore.put(job.getId(), job);
     }
 
-    public BatchJob findById(Long jobId) {
-        return jobStore.values()
-                       .stream()
-                       .filter(batchJob -> batchJob.getId().equals(jobId))
-                       .findAny()
-                       .orElse(null);
+    public void remove(BatchJob job) {
+        jobStore.remove(job.getId());
     }
 
-    public List<BatchJob> findAllByCreateDateInterval(LocalDateTime start, LocalDateTime end) {
-        return jobStore.values()
-                       .stream()
-                       .filter(batchJob -> batchJob.getCreatedAt().isAfter(start) && batchJob.getCreatedAt().isBefore(end))
-                       .collect(Collectors.toList());
+    public BatchJob findById(Long jobId) {
+        for (BatchJob jobItem : jobStore.values()) {
+            if (jobItem.getId().equals(jobId)) {
+                return jobItem;
+            }
+        }
+        return null;
     }
 
     @Override
     public List<BatchJob> findAll() {
         return new ArrayList<>(jobStore.values());
-    }
-
-    @Override
-    protected EntityMapper<BatchJob> getMapper() {
-        return null;
     }
 
 }

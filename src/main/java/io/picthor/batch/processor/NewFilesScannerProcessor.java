@@ -93,7 +93,7 @@ public class NewFilesScannerProcessor extends AbstractBatchJobProcessor {
         job.setProcessType(BatchJob.ProcessType.PARALLEL);
         job.setProcessAt(LocalDateTime.now());
         job.setItems(new ArrayList<>());
-        job.getPayload().put("rootDirectoryId", rootDir.getId());
+        job.setRootDirectoryId(rootDir.getId());
         batchJobDao.persist(job);
 
         try {
@@ -108,7 +108,7 @@ public class NewFilesScannerProcessor extends AbstractBatchJobProcessor {
                 item.setBatchJobId(job.getId());
                 item.setBatchJob(job);
                 item.setState(BatchJobItem.State.NEW);
-                item.getPayload().put("rootDirectoryId", rootDir.getId());
+                item.setRootDirectoryId(rootDir.getId());
                 item.getPayload().put("directoriesPaths", subSet.stream().map(Directory::getFullPath).collect(Collectors.toList()));
                 item.setPositionInQueue(i++);
                 item.setProcessAt(job.getProcessAt());
@@ -144,7 +144,6 @@ public class NewFilesScannerProcessor extends AbstractBatchJobProcessor {
         try {
 
             List<String> directoriesPaths = (List<String>) item.getPayload().get("directoriesPaths");
-            Long rootDirectoryId = Long.valueOf((Long) item.getPayload().get("rootDirectoryId"));
 
             List<Directory> directories = new ArrayList<>();
             List<List<String>> subSets = ListUtils.partition(directoriesPaths, Short.MAX_VALUE);
@@ -182,7 +181,7 @@ public class NewFilesScannerProcessor extends AbstractBatchJobProcessor {
                              if (fileData == null) {
                                  try {
                                      fileData = filesIndexer.index(path);
-                                     fileData.setRootDirectoryId(rootDirectoryId);
+                                     fileData.setRootDirectoryId(item.getRootDirectoryId());
                                      fileDataDao.persist(fileData);
                                  } catch (IOException e) {
                                      log.error("JOB: {} ITEM: {} failed to to index file: {}", item.getBatchJobId(), item.getId(), path, e);

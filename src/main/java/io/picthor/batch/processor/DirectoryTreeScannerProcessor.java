@@ -76,13 +76,13 @@ public class DirectoryTreeScannerProcessor extends AbstractBatchJobProcessor {
         job.setProcessAt(LocalDateTime.now());
         job.setItems(new ArrayList<>());
         job.setTotalItems(1);
-        job.getPayload().put("rootDirectoryId", rootDir.getId());
+        job.setRootDirectoryId(rootDir.getId());
 
         BatchJobItem item = new BatchJobItem();
         item.setBatchJobId(job.getId());
         item.setBatchJob(job);
         item.setState(BatchJobItem.State.NEW);
-        item.getPayload().put("rootDirectoryId", rootDir.getId());
+        item.setRootDirectoryId(rootDir.getId());
         item.setPositionInQueue(1);
         item.setProcessAt(job.getProcessAt());
         item.setFirstInQueue(true);
@@ -110,8 +110,7 @@ public class DirectoryTreeScannerProcessor extends AbstractBatchJobProcessor {
             StopWatch sw = new StopWatch();
             sw.start();
 
-            Long rootDirectoryId = (Long) item.getPayload().get("rootDirectoryId");
-            Directory rootDir = directoryDao.findById(rootDirectoryId);
+            Directory rootDir = directoryDao.findById(item.getRootDirectoryId());
             List<Directory> directories = listAllDirectories(rootDir);
             directories.add(rootDir);
 
@@ -124,10 +123,7 @@ public class DirectoryTreeScannerProcessor extends AbstractBatchJobProcessor {
             log.debug("JOB: {} ITEM: {} TOOK: {} to scan directory tree of size: {}", item.getBatchJobId(), item.getId(),
                     DurationFormatUtils.formatDurationHMS(sw.getTotalTimeMillis()), directories.size());
 
-            BatchJob newFilesJob = newFilesScannerProcessor.createJob(Map.of("directory", rootDir, "directories", directories));
-//            if (newFilesJob != null) {
-////                batchJobService.startJob(newFilesJob);
-//            }
+            newFilesScannerProcessor.createJob(Map.of("directory", rootDir, "directories", directories));
 
         } catch (Exception e) {
             log.error("JOB: " + item.getBatchJobId() + " ITEM: " + item.getId() + " Failed to process job item", e);

@@ -67,7 +67,7 @@ public class DeletedFilesScannerProcessor extends AbstractBatchJobProcessor {
         job.setProcessType(BatchJob.ProcessType.PARALLEL);
         job.setProcessAt(LocalDateTime.now());
         job.setItems(new ArrayList<>());
-        job.getPayload().put("rootDirectoryId", rootDir.getId());
+        job.setRootDirectoryId(rootDir.getId());
         batchJobDao.persist(job);
 
         log.info("JOB: {} Total: {} files to scan, creating batch job items based on threadsNum config: {}", job.getId(), filesIds.size(),
@@ -83,7 +83,7 @@ public class DeletedFilesScannerProcessor extends AbstractBatchJobProcessor {
             item.setBatchJob(job);
             item.setState(BatchJobItem.State.NEW);
             item.getPayload().put("ids", subSet);
-            item.getPayload().put("rootDirectoryId", rootDir.getId());
+            item.setRootDirectoryId(rootDir.getId());
             item.setPositionInQueue(i);
             item.setProcessAt(job.getProcessAt());
             item.setFirstInQueue(false);

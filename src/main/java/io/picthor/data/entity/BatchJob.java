@@ -34,6 +34,7 @@ public class BatchJob extends AbstractEntity {
     private LocalDateTime processAt;
     private List<BatchJobItem> items;
     private Map<String, Object> payload = new HashMap<>();
+    private Long rootDirectoryId;
 
     public String getSafeName() {
         if (name == null) {
