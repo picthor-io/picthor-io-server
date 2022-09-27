@@ -26,6 +26,7 @@ public class BatchJob extends AbstractEntity {
     }
 
     private String name;
+    private String doneMessage;
     private Integer totalItems;
     private Integer totalProcessed;
     private Type type;

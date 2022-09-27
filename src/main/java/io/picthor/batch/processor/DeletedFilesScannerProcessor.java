@@ -10,6 +10,7 @@ import io.picthor.data.entity.BatchJobItem;
 import io.picthor.data.entity.Directory;
 import io.picthor.data.entity.FileData;
 import io.picthor.services.JobCounterService;
+import io.picthor.websocket.service.WebSocketService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.ListUtils;
 import org.springframework.stereotype.Service;
@@ -32,11 +33,14 @@ public class DeletedFilesScannerProcessor extends AbstractBatchJobProcessor {
 
     private final JobCounterService jobCounterService;
 
+    private final WebSocketService webSocketService;
+
     public DeletedFilesScannerProcessor(FileDataDao fileDataDao, BatchJobDao batchJobDao, BatchJobItemDao batchJobItemDao, AppProperties appProperties,
-                                        JobCounterService jobCounterService) {
+                                        JobCounterService jobCounterService, WebSocketService webSocketService) {
         this.fileDataDao = fileDataDao;
         this.appProperties = appProperties;
         this.jobCounterService = jobCounterService;
+        this.webSocketService = webSocketService;
         this.batchJobDao = batchJobDao;
         this.batchJobItemDao = batchJobItemDao;
     }
@@ -68,6 +72,7 @@ public class DeletedFilesScannerProcessor extends AbstractBatchJobProcessor {
         job.setProcessAt(LocalDateTime.now());
         job.setItems(new ArrayList<>());
         job.setRootDirectoryId(rootDir.getId());
+        job.setDoneMessage("Scanned " + filesIds.size() + " directories for deleted files");
         batchJobDao.persist(job);
 
         log.info("JOB: {} Total: {} files to scan, creating batch job items based on threadsNum config: {}", job.getId(), filesIds.size(),
@@ -98,6 +103,7 @@ public class DeletedFilesScannerProcessor extends AbstractBatchJobProcessor {
 
         job.setTotalItems(job.getItems().size());
         batchJobDao.persist(job);
+        webSocketService.publishJobAdded(job);
 
         return job;
     }

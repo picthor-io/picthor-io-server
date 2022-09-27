@@ -13,6 +13,7 @@ import io.picthor.data.entity.FileData;
 import io.picthor.services.DirectoryStatsService;
 import io.picthor.services.FilesIndexer;
 import io.picthor.services.JobCounterService;
+import io.picthor.websocket.service.WebSocketService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.time.DurationFormatUtils;
@@ -48,18 +49,21 @@ public class NewFilesScannerProcessor extends AbstractBatchJobProcessor {
 
     private final DirectoryStatsService statsService;
 
+    private final WebSocketService webSocketService;
+
     @Autowired
     public NewFilesScannerProcessor(BatchJobDao batchJobDao, BatchJobItemDao batchJobItemDao, FilesIndexer filesIndexer,
                                     FileDataDao fileDataDao,
                                     DirectoryDao directoryDao, JobCounterService jobCounterService,
                                     AppProperties appProperties,
-                                    DirectoryStatsService statsService) {
+                                    DirectoryStatsService statsService, WebSocketService webSocketService) {
         this.filesIndexer = filesIndexer;
         this.fileDataDao = fileDataDao;
         this.directoryDao = directoryDao;
         this.jobCounterService = jobCounterService;
         this.appProperties = appProperties;
         this.statsService = statsService;
+        this.webSocketService = webSocketService;
         this.batchJobDao = batchJobDao;
         this.batchJobItemDao = batchJobItemDao;
     }
@@ -89,11 +93,12 @@ public class NewFilesScannerProcessor extends AbstractBatchJobProcessor {
         BatchJob job = new BatchJob();
         job.setType(BatchJob.Type.NEW_FILES_SCANNER);
         job.setState(BatchJob.State.NEW);
-        job.setName("Directories scan");
+        job.setName("New files scan");
         job.setProcessType(BatchJob.ProcessType.PARALLEL);
         job.setProcessAt(LocalDateTime.now());
         job.setItems(new ArrayList<>());
         job.setRootDirectoryId(rootDir.getId());
+        job.setDoneMessage("Scanned " + directories.size() + " directories");
         batchJobDao.persist(job);
 
         try {
@@ -126,6 +131,7 @@ public class NewFilesScannerProcessor extends AbstractBatchJobProcessor {
 
         job.setTotalItems(job.getItems().size());
         batchJobDao.persist(job);
+        webSocketService.publishJobAdded(job);
 
         return job;
     }
@@ -142,7 +148,6 @@ public class NewFilesScannerProcessor extends AbstractBatchJobProcessor {
         batchJobItemDao.persist(item);
 
         try {
-
             List<String> directoriesPaths = (List<String>) item.getPayload().get("directoriesPaths");
 
             List<Directory> directories = new ArrayList<>();
@@ -211,7 +216,6 @@ public class NewFilesScannerProcessor extends AbstractBatchJobProcessor {
             log.error("JOB: " + item.getBatchJobId() + " ITEM: " + item.getId() + " Failed to process job item", e);
         }
     }
-
 
     private List<Path> listFilesUsingFileWalk(String dir, List<String> existingPaths) throws IOException {
 //        String find = processRunner.execute("find", "-printf", "{\\\"size\\\":%s\\, filename\\\": \\\"%p\\\"},\n");

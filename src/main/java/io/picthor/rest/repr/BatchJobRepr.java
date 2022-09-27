@@ -12,28 +12,9 @@ public class BatchJobRepr extends AbstractEntityRepr {
 
     private final BatchJob batchJob;
 
-    @Setter
-    private JobCounter jobCounter;
-
     public BatchJobRepr(BatchJob batchJob) {
         super(batchJob);
         this.batchJob = batchJob;
-    }
-
-    @JsonProperty
-    public Integer getCounterTotal() {
-        if (jobCounter != null) {
-            return jobCounter.getTotal();
-        }
-        return null;
-    }
-
-    @JsonProperty
-    public Integer getCounterCurrent() {
-        if (jobCounter != null) {
-            return jobCounter.getCounter().get();
-        }
-        return null;
     }
 
     @JsonProperty
@@ -69,5 +50,10 @@ public class BatchJobRepr extends AbstractEntityRepr {
     @JsonProperty
     public Integer getTotalProcessed() {
         return batchJob.getTotalProcessed();
+    }
+
+    @JsonProperty
+    public Long getRootDirectoryId() {
+        return batchJob.getRootDirectoryId();
     }
 }

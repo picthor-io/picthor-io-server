@@ -4,6 +4,7 @@ import io.picthor.data.dao.BatchJobDao;
 import io.picthor.data.dao.BatchJobItemDao;
 import io.picthor.data.entity.BatchJob;
 import io.picthor.data.entity.BatchJobItem;
+import io.picthor.websocket.service.WebSocketService;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -20,16 +21,22 @@ import java.util.stream.Collectors;
 @Slf4j
 public class JobCounterService {
 
-    public final NotificationsService notificationsService;
+    private final NotificationsService notificationsService;
+
+    private final WebSocketService webSocketService;
+
     private final BatchJobItemDao batchJobItemDao;
+
     private final BatchJobDao batchJobDao;
     @Getter
     private final Map<Long, JobCounter> counters = new HashMap<>();
 
-    public JobCounterService(BatchJobItemDao batchJobItemDao, BatchJobDao batchJobDao, NotificationsService notificationsService) {
+    public JobCounterService(BatchJobItemDao batchJobItemDao, BatchJobDao batchJobDao, NotificationsService notificationsService,
+                             WebSocketService webSocketService) {
         this.batchJobItemDao = batchJobItemDao;
         this.batchJobDao = batchJobDao;
         this.notificationsService = notificationsService;
+        this.webSocketService = webSocketService;
     }
 
     public void init(Long jobId, Integer total) {
@@ -79,8 +86,9 @@ public class JobCounterService {
                 BatchJob job = batchJobDao.findById(jobId);
                 if (job != null) {
                     if (counter.getTotal() > 0) {
-                        notificationsService.addSuccess(job.getName() + " is finished", "Total files processed: " + counter.getTotal());
+                        notificationsService.addSuccess(job.getName() + " is finished", job.getDoneMessage());
                     }
+                    webSocketService.publishJobRemoved(job);
                     counters.remove(jobId);
                     batchJobDao.remove(job);
                 }
@@ -93,7 +101,9 @@ public class JobCounterService {
     }
 
     public void incr(Long jobId) {
-        counters.get(jobId).getCounter().addAndGet(1);
+        JobCounter jobCounter = counters.get(jobId);
+        jobCounter.getCounter().addAndGet(1);
+        webSocketService.publishJobCounterUpdated(jobCounter);
     }
 
 }

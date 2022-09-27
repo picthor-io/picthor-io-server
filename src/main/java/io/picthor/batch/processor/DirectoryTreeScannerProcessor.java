@@ -10,6 +10,7 @@ import io.picthor.data.entity.BatchJob;
 import io.picthor.data.entity.BatchJobItem;
 import io.picthor.data.entity.Directory;
 import io.picthor.services.JobCounterService;
+import io.picthor.websocket.service.WebSocketService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,16 +39,20 @@ public class DirectoryTreeScannerProcessor extends AbstractBatchJobProcessor {
 
     private final NewFilesScannerProcessor newFilesScannerProcessor;
 
+    private final WebSocketService webSocketService;
+
     @Autowired
     public DirectoryTreeScannerProcessor(BatchJobDao batchJobDao, BatchJobItemDao batchJobItemDao,
                                          DirectoryDao directoryDao,
                                          AppProperties appProperties,
-                                         ProcessRunner processRunner, JobCounterService jobCounterService, NewFilesScannerProcessor newFilesScannerProcessor) {
+                                         ProcessRunner processRunner, JobCounterService jobCounterService, NewFilesScannerProcessor newFilesScannerProcessor,
+                                         WebSocketService webSocketService) {
         this.directoryDao = directoryDao;
         this.appProperties = appProperties;
         this.processRunner = processRunner;
         this.jobCounterService = jobCounterService;
         this.newFilesScannerProcessor = newFilesScannerProcessor;
+        this.webSocketService = webSocketService;
         this.batchJobDao = batchJobDao;
         this.batchJobItemDao = batchJobItemDao;
     }
@@ -92,6 +97,7 @@ public class DirectoryTreeScannerProcessor extends AbstractBatchJobProcessor {
         batchJobItemDao.persist(item);
         job.getItems().add(item);
         batchJobDao.persist(job);
+        webSocketService.publishJobAdded(job);
         return job;
     }
 
@@ -118,10 +124,13 @@ public class DirectoryTreeScannerProcessor extends AbstractBatchJobProcessor {
             jobCounterService.incr(item.getBatchJobId());
             batchJobItemDao.persist(item);
 
-
             sw.stop();
             log.debug("JOB: {} ITEM: {} TOOK: {} to scan directory tree of size: {}", item.getBatchJobId(), item.getId(),
-                    DurationFormatUtils.formatDurationHMS(sw.getTotalTimeMillis()), directories.size());
+                    DurationFormatUtils.formatDurationWords(sw.getTotalTimeMillis(), true, true), directories.size());
+
+            item.getBatchJob()
+                .setDoneMessage("Found: " + directories.size() + " directories in: "
+                        + DurationFormatUtils.formatDurationWords((long) sw.getTotalTimeSeconds(), true, true));
 
             newFilesScannerProcessor.createJob(Map.of("directory", rootDir, "directories", directories));
 

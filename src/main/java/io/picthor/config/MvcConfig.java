@@ -68,6 +68,15 @@ public class MvcConfig implements WebMvcConfigurer {
         ;
     }
 
+    @Override
+    public void addCorsMappings(CorsRegistry registry) {
+        registry.addMapping("/**")
+                .allowedOrigins(properties.getAllowedCorsOrigins().toArray(String[]::new))
+                .allowedMethods("POST", "PUT", "GET", "DELETE", "HEAD")
+        ;
+        log.info("Allowed CORS origins: {}", properties.getAllowedCorsOrigins());
+    }
+
     /**
      * Filter to forward all non /api and non static file requests to index.html of the UI dist
      */
@@ -76,7 +85,10 @@ public class MvcConfig implements WebMvcConfigurer {
         FilterRegistrationBean<Filter> filterFilterRegistrationBean = new FilterRegistrationBean<>();
         filterFilterRegistrationBean.setFilter((request, response, chain) -> {
             HttpServletRequest request1 = (HttpServletRequest) request;
-            if (!request1.getRequestURI().startsWith("/api/") && !request1.getRequestURI().contains(".")) {
+            if (!request1.getRequestURI().startsWith("/ws")
+                    && !request1.getRequestURI().startsWith("/api/")
+                    && !request1.getRequestURI().contains(".")
+            ) {
                 RequestDispatcher requestDispatcher = request.getRequestDispatcher("/index.html");
                 requestDispatcher.forward(request, response);
                 return;
@@ -118,14 +130,5 @@ public class MvcConfig implements WebMvcConfigurer {
         registrationBean.addUrlPatterns("/*");
         registrationBean.setOrder(Integer.MIN_VALUE);
         return registrationBean;
-    }
-
-    @Override
-    public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/**")
-                .allowedOrigins(properties.getAllowedCorsOrigins().toArray(String[]::new))
-                .allowedMethods("POST", "PUT", "GET", "DELETE", "HEAD")
-        ;
-        log.info("Allowed CORS origins: {}", properties.getAllowedCorsOrigins());
     }
 }
