@@ -20,11 +20,10 @@ import java.util.concurrent.TimeUnit;
 public class DirectoryStatsService {
 
     private final PublishSubject<Boolean> syncSubject = PublishSubject.create();
-    private final Disposable subscription;
     private final DirectoryDao directoryDao;
 
     public DirectoryStatsService(DirectoryDao directoryDao) {
-        subscription = syncSubject.sample(5, TimeUnit.SECONDS, true).subscribe(id -> processSync(), Throwable::printStackTrace);
+        syncSubject.sample(5, TimeUnit.SECONDS, true).subscribe(id -> processSync(), Throwable::printStackTrace);
         this.directoryDao = directoryDao;
     }
 

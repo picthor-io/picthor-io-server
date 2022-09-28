@@ -98,8 +98,8 @@ public class DirectoryTreeScannerProcessor extends AbstractBatchJobProcessor {
         job.getItems().add(item);
 
         batchJobDao.persist(job);
-        jobCounterService.init(job, job.getItems().stream().mapToInt(BatchJobItem::getInternalTotal).sum());
         webSocketService.publishJobAdded(job);
+        jobCounterService.init(job, job.getItems().stream().mapToInt(BatchJobItem::getInternalTotal).sum());
         return job;
     }
 

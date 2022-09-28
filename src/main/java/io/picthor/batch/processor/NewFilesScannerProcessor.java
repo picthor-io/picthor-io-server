@@ -93,7 +93,7 @@ public class NewFilesScannerProcessor extends AbstractBatchJobProcessor {
         BatchJob job = new BatchJob();
         job.setType(BatchJob.Type.NEW_FILES_SCANNER);
         job.setState(BatchJob.State.NEW);
-        job.setName("New files scan");
+        job.setName("Scanning for files in directories ");
         job.setProcessType(BatchJob.ProcessType.PARALLEL);
         job.setProcessAt(LocalDateTime.now());
         job.setItems(new ArrayList<>());
@@ -131,8 +131,8 @@ public class NewFilesScannerProcessor extends AbstractBatchJobProcessor {
 
         job.setTotalItems(job.getItems().size());
         batchJobDao.persist(job);
-        jobCounterService.init(job, job.getItems().stream().mapToInt(BatchJobItem::getInternalTotal).sum());
         webSocketService.publishJobAdded(job);
+        jobCounterService.init(job, job.getItems().stream().mapToInt(BatchJobItem::getInternalTotal).sum());
 
         return job;
     }

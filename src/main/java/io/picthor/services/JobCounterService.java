@@ -40,8 +40,9 @@ public class JobCounterService {
     }
 
     public void init(BatchJob job, Integer total) {
-        this.counters.put(job.getId(), new JobCounter(job.getId(), job.getRootDirectoryId(), total));
-        this.checkStatus();
+        JobCounter counter = new JobCounter(job.getId(), job.getRootDirectoryId(), total);
+        this.counters.put(job.getId(), counter);
+        webSocketService.publishJobCounterUpdated(counter);
     }
 
     @Scheduled(fixedRate = 1000)

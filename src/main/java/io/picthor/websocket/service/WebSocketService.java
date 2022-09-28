@@ -3,7 +3,6 @@ package io.picthor.websocket.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.RateLimiter;
-import io.picthor.data.dao.BatchJobDao;
 import io.picthor.data.entity.BatchJob;
 import io.picthor.rest.repr.BatchJobRepr;
 import io.picthor.rest.repr.JobCounterRepr;
@@ -12,7 +11,6 @@ import io.picthor.services.JobCounter;
 import io.picthor.services.Notification;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -25,13 +23,10 @@ public class WebSocketService {
 
     private final RateLimiter rateLimiter;
 
-    private final BatchJobDao batchJobDao;
-
-    public WebSocketService(SimpMessagingTemplate template, ObjectMapper objectMapper, BatchJobDao batchJobDao) {
+    public WebSocketService(SimpMessagingTemplate template, ObjectMapper objectMapper) {
         this.template = template;
         this.objectMapper = objectMapper;
-        this.batchJobDao = batchJobDao;
-        this.rateLimiter = RateLimiter.create(20);
+        this.rateLimiter = RateLimiter.create(10);
     }
 
     public void publishNotification(Notification notification) {

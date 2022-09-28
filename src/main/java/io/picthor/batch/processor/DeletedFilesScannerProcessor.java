@@ -103,8 +103,8 @@ public class DeletedFilesScannerProcessor extends AbstractBatchJobProcessor {
 
         job.setTotalItems(job.getItems().size());
         batchJobDao.persist(job);
-        jobCounterService.init(job, job.getItems().stream().mapToInt(BatchJobItem::getInternalTotal).sum());
         webSocketService.publishJobAdded(job);
+        jobCounterService.init(job, job.getItems().stream().mapToInt(BatchJobItem::getInternalTotal).sum());
 
         return job;
     }
