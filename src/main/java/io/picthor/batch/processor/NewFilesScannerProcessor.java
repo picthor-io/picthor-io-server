@@ -93,7 +93,7 @@ public class NewFilesScannerProcessor extends AbstractBatchJobProcessor {
         BatchJob job = new BatchJob();
         job.setType(BatchJob.Type.NEW_FILES_SCANNER);
         job.setState(BatchJob.State.NEW);
-        job.setName("Scanning for files in directories ");
+        job.setName("Scanning files in directories");
         job.setProcessType(BatchJob.ProcessType.PARALLEL);
         job.setProcessAt(LocalDateTime.now());
         job.setItems(new ArrayList<>());

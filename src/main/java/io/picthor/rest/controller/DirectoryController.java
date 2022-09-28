@@ -41,16 +41,21 @@ public class DirectoryController extends AbstractEntityController<Directory> {
     private final BatchJobService batchJobService;
 
     private final RootDirectoryFormProcessor formProcessor;
+
     private final BatchJobDao batchJobDao;
+
+    private final JobCounterService jobCounterService;
+
     public DirectoryController(DirectoryDao directoryDao, DirectoryTreeScannerProcessor directoryTreeScannerProcessor,
                                DeletedFilesScannerProcessor deletedFilesScannerProcessor, BatchJobService batchJobService,
-                               RootDirectoryFormProcessor formProcessor, BatchJobDao batchJobDao) {
+                               RootDirectoryFormProcessor formProcessor, BatchJobDao batchJobDao, JobCounterService jobCounterService) {
         this.directoryDao = directoryDao;
         this.directoryTreeScannerProcessor = directoryTreeScannerProcessor;
         this.deletedFilesScannerProcessor = deletedFilesScannerProcessor;
         this.batchJobService = batchJobService;
         this.formProcessor = formProcessor;
         this.batchJobDao = batchJobDao;
+        this.jobCounterService = jobCounterService;
     }
 
     @RequestMapping(value = "", method = RequestMethod.POST)
@@ -97,6 +102,10 @@ public class DirectoryController extends AbstractEntityController<Directory> {
         List<BatchJob> jobs = batchJobDao.findByRooDirectory(directory);
         for (BatchJob job : jobs) {
             BatchJobRepr repr = new BatchJobRepr(job);
+            JobCounter counter = jobCounterService.getJobCounter(job.getId());
+            if (counter != null) {
+                repr.setCounter(counter);
+            }
             reprs.add(repr);
         }
         return reprs;
