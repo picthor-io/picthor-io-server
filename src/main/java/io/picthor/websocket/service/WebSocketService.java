@@ -2,6 +2,8 @@ package io.picthor.websocket.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.util.concurrent.RateLimiter;
+import io.picthor.data.dao.BatchJobDao;
 import io.picthor.data.entity.BatchJob;
 import io.picthor.rest.repr.BatchJobRepr;
 import io.picthor.rest.repr.JobCounterRepr;
@@ -10,6 +12,7 @@ import io.picthor.services.JobCounter;
 import io.picthor.services.Notification;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -20,9 +23,15 @@ public class WebSocketService {
 
     private final ObjectMapper objectMapper;
 
-    public WebSocketService(SimpMessagingTemplate template, ObjectMapper objectMapper) {
+    private final RateLimiter rateLimiter;
+
+    private final BatchJobDao batchJobDao;
+
+    public WebSocketService(SimpMessagingTemplate template, ObjectMapper objectMapper, BatchJobDao batchJobDao) {
         this.template = template;
         this.objectMapper = objectMapper;
+        this.batchJobDao = batchJobDao;
+        this.rateLimiter = RateLimiter.create(20);
     }
 
     public void publishNotification(Notification notification) {
@@ -35,11 +44,13 @@ public class WebSocketService {
     }
 
     public void publishJobCounterUpdated(JobCounter counter) {
-        log.debug("Publishing job counter update: {}", counter.getJobId());
-        try {
-            this.template.convertAndSend("/topic/jobs/counter-update", objectMapper.writeValueAsString(new JobCounterRepr(counter)));
-        } catch (JsonProcessingException e) {
-            log.error("Failed to publish job updated: {}", counter.getJobId());
+        if (rateLimiter.tryAcquire(1)) {
+            log.debug("Publishing job counter update: {}", counter.getJobId());
+            try {
+                this.template.convertAndSend("/topic/jobs/counter-update", objectMapper.writeValueAsString(new JobCounterRepr(counter)));
+            } catch (JsonProcessingException e) {
+                log.error("Failed to publish job updated: {}", counter.getJobId());
+            }
         }
     }
 

@@ -161,7 +161,7 @@ public class BatchJobService {
         batchJob.setState(BatchJob.State.PROCESSING);
         batchJobDao.persist(batchJob);
         List<BatchJobItem> items = batchJobItemDao.findByJobId(batchJob.getId());
-        jobCounterService.init(batchJob.getId(), items.stream().mapToInt(BatchJobItem::getInternalTotal).sum());
+
         log.info("JOB: {} Starting {} job, items to process: {}", batchJob.getId(), batchJob.getProcessType(), items.size());
 
         switch (batchJob.getProcessType()) {

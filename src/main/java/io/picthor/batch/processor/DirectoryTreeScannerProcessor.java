@@ -96,7 +96,9 @@ public class DirectoryTreeScannerProcessor extends AbstractBatchJobProcessor {
         item.setInternalProcessed(0);
         batchJobItemDao.persist(item);
         job.getItems().add(item);
+
         batchJobDao.persist(job);
+        jobCounterService.init(job, job.getItems().stream().mapToInt(BatchJobItem::getInternalTotal).sum());
         webSocketService.publishJobAdded(job);
         return job;
     }
@@ -129,8 +131,7 @@ public class DirectoryTreeScannerProcessor extends AbstractBatchJobProcessor {
                     DurationFormatUtils.formatDurationWords(sw.getTotalTimeMillis(), true, true), directories.size());
 
             item.getBatchJob()
-                .setDoneMessage("Found: " + directories.size() + " directories in: "
-                        + DurationFormatUtils.formatDurationWords((long) sw.getTotalTimeSeconds(), true, true));
+                .setDoneMessage("Found: " + directories.size() + " directories");
 
             newFilesScannerProcessor.createJob(Map.of("directory", rootDir, "directories", directories));
 

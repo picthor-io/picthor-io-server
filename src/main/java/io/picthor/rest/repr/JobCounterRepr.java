@@ -32,4 +32,9 @@ public class JobCounterRepr {
         return jobCounter.getJobId();
     }
 
+    @JsonProperty
+    private Long getRootDirectoryId() {
+        return jobCounter.getRootDirectoryId();
+    }
+
 }
